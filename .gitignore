@@ -110,7 +110,7 @@ UpgradeLog*.XML
 UpgradeLog*.htm
 
 # Data folders
-**/App_Data/*.db
+**/App_Data/*
 
 # =========================
 # Windows detritus
