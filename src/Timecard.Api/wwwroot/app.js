@@ -1,34 +1,48 @@
+import { timecardApi } from "./timecardApi.js";
+
+// ============================================================================
+// Utility Functions
+// ============================================================================
+
 const $ = (sel) => document.querySelector(sel);
+
+/**
+ * Wraps an async function with UI error handling (alert on error)
+ */
+function withUiError(fn) {
+  return async (...args) => {
+    try {
+      return await fn(...args);
+    } catch (e) {
+      alert(e.message || "發生錯誤");
+    }
+  };
+}
 
 function fmtTime(dt) {
   if (!dt) return "—";
   const d = new Date(dt);
   return new Intl.DateTimeFormat("zh-Hant", { hour: "2-digit", minute: "2-digit" }).format(d);
 }
+
 function fmtDate(isoDate) {
   // yyyy-MM-dd
   return isoDate;
 }
+
 function mins(m) {
   const sign = m > 0 ? "+" : "";
   return `${sign}${m}`;
-}
-
-async function api(url, options) {
-  const res = await fetch(url, options);
-  const txt = await res.text();
-  const data = txt ? JSON.parse(txt) : null;
-  if (!res.ok) {
-    const msg = data?.error || `${res.status} ${res.statusText}`;
-    throw new Error(msg);
-  }
-  return data;
 }
 
 function setTodayInputs(dateStr) {
   $("#adjDate").value = dateStr;
   $("#nwDate").value = dateStr;
 }
+
+// ============================================================================
+// Day View Rendering
+// ============================================================================
 
 function renderDay(day) {
   $("#todaySummary").textContent =
@@ -83,28 +97,32 @@ function renderDay(day) {
   }
 }
 
-async function refreshToday() {
-  const day = await api("/api/day/today");
+// ============================================================================
+// Day Operations (using timecardApi)
+// ============================================================================
+
+const refreshToday = withUiError(async () => {
+  const day = await timecardApi.getToday();
   setTodayInputs(day.date);
   renderDay(day);
-}
+});
 
-async function clockIn() {
-  const day = await api("/api/clock/in", { method: "POST" });
+const clockIn = withUiError(async () => {
+  const day = await timecardApi.clockIn();
   renderDay(day);
-}
+});
 
-async function clockOut() {
-  const day = await api("/api/clock/out", { method: "POST" });
+const clockOut = withUiError(async () => {
+  const day = await timecardApi.clockOut();
   renderDay(day);
-}
+});
 
-async function deleteSession(id) {
-  const day = await api(`/api/sessions/${id}`, { method: "DELETE" });
+const deleteSession = withUiError(async (id) => {
+  const day = await timecardApi.deleteSession(id);
   renderDay(day);
-}
+});
 
-async function addAdjustment(e) {
+const addAdjustment = withUiError(async (e) => {
   e.preventDefault();
   const payload = {
     date: $("#adjDate").value,
@@ -112,33 +130,29 @@ async function addAdjustment(e) {
     minutes: Number($("#adjMinutes").value || 0),
     note: $("#adjNote").value.trim()
   };
-  const day = await api("/api/adjustments", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
+  const day = await timecardApi.addAdjustment(payload);
   renderDay(day);
-}
+});
 
-async function deleteAdjustment(id) {
-  const day = await api(`/api/adjustments/${id}`, { method: "DELETE" });
+const deleteAdjustment = withUiError(async (id) => {
+  const day = await timecardApi.deleteAdjustment(id);
   renderDay(day);
-}
+});
 
-async function setNonWorking(e) {
+const setNonWorking = withUiError(async (e) => {
   e.preventDefault();
   const date = $("#nwDate").value;
   const payload = {
     isNonWorkingDay: $("#nwFlag").checked,
     note: $("#nwNote").value.trim()
   };
-  const day = await api(`/api/day/${date}/nonworking`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
+  const day = await timecardApi.setNonWorking(date, payload);
   renderDay(day);
-}
+});
+
+// ============================================================================
+// Month View Rendering
+// ============================================================================
 
 function renderMonth(m) {
   $("#monthSummary").textContent = `month=${m.year}-${String(m.month).padStart(2, "0")} flexBankEnd=${m.flexBankEnd} days=${m.days.length}`;
@@ -166,14 +180,22 @@ function renderMonth(m) {
   }
 }
 
-async function loadMonth() {
+// ============================================================================
+// Month Operations (using timecardApi)
+// ============================================================================
+
+const loadMonth = withUiError(async () => {
   const ym = $("#monthPick").value; // yyyy-MM
   if (!ym) return;
   const [y, m] = ym.split("-").map(Number);
   const includeEmpty = $("#includeEmpty").checked;
-  const data = await api(`/api/month/${y}/${m}?includeEmpty=${includeEmpty}`);
+  const data = await timecardApi.getMonth(y, m, includeEmpty);
   renderMonth(data);
-}
+});
+
+// ============================================================================
+// Initialization
+// ============================================================================
 
 function initDefaults() {
   const now = new Date();
@@ -182,26 +204,38 @@ function initDefaults() {
   $("#monthPick").value = `${yyyy}-${mm}`;
 }
 
+// ============================================================================
+// Event Listeners
+// ============================================================================
+
+// Delegated event handling for delete buttons
 document.addEventListener("click", async (e) => {
   const t = e.target;
   if (t?.dataset?.delSession) {
-    try { await deleteSession(t.dataset.delSession); } catch (err) { alert(err.message); }
+    await deleteSession(t.dataset.delSession);
   }
   if (t?.dataset?.delAdj) {
-    try { await deleteAdjustment(t.dataset.delAdj); } catch (err) { alert(err.message); }
+    await deleteAdjustment(t.dataset.delAdj);
   }
 });
 
-$("#btnIn").addEventListener("click", async () => { try { await clockIn(); } catch (e) { alert(e.message); } });
-$("#btnOut").addEventListener("click", async () => { try { await clockOut(); } catch (e) { alert(e.message); } });
-$("#btnRefresh").addEventListener("click", async () => { try { await refreshToday(); } catch (e) { alert(e.message); } });
+// Clock in/out buttons
+$("#btnIn").addEventListener("click", clockIn);
+$("#btnOut").addEventListener("click", clockOut);
+$("#btnRefresh").addEventListener("click", refreshToday);
 
-$("#adjForm").addEventListener("submit", async (e) => { try { await addAdjustment(e); } catch (err) { alert(err.message); } });
-$("#nonWorkForm").addEventListener("submit", async (e) => { try { await setNonWorking(e); } catch (err) { alert(err.message); } });
+// Form submissions
+$("#adjForm").addEventListener("submit", addAdjustment);
+$("#nonWorkForm").addEventListener("submit", setNonWorking);
 
-$("#btnMonth").addEventListener("click", async () => { try { await loadMonth(); } catch (err) { alert(err.message); } });
+// Month view
+$("#btnMonth").addEventListener("click", loadMonth);
 
-(async function main(){
+// ============================================================================
+// Main Entry Point
+// ============================================================================
+
+(async function main() {
   initDefaults();
   await refreshToday();
   await loadMonth();
