@@ -18,7 +18,6 @@ public static class AdjustmentEndpoints
     }
 
     public sealed record AdjustmentCreate(string Date, string Kind, int Minutes, string? Note);
-
     public sealed record AdjustmentUpdate(string Kind, int Minutes, string? Note);
 
     private static async Task<IResult> Create(TimecardDb db, AdjustmentCreate req, CancellationToken ct)

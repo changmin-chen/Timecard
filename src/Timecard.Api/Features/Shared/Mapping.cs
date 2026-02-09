@@ -6,9 +6,18 @@ namespace Timecard.Api.Features.Shared;
 
 public static class Mapping
 {
-    public static int SumWorkedMinutes(IEnumerable<WorkSession> sessions)
-        => sessions.Where(s => s.End is not null)
-                   .Sum(s => (int)Math.Max(0, (s.End!.Value - s.Start).TotalMinutes));
+    public static (DateTimeOffset? start, DateTimeOffset? end, int workedMinutes) DeriveSpan(IEnumerable<PunchEvent> punches)
+    {
+        var ordered = punches.OrderBy(p => p.At).ToList();
+        if (ordered.Count == 0) return (null, null, 0);
+
+        var start = ordered[0].At;
+        if (ordered.Count == 1) return (start, null, 0);
+
+        var end = ordered[^1].At;
+        var mins = (int)Math.Max(0, (end - start).TotalMinutes);
+        return (start, end, mins);
+    }
 
     public static int SumCreditedMinutes(IEnumerable<Adjustment> adjustments)
         => adjustments.Sum(a => a.Minutes);
@@ -20,9 +29,11 @@ public static class Mapping
         var note = day?.Note ?? "";
 
         var planned = isNonWorking ? 0 : WorkRules.PlannedMinutesPerWorkDay;
-        var worked = day is null ? 0 : SumWorkedMinutes(day.Sessions);
-        var credited = day is null ? 0 : SumCreditedMinutes(day.Adjustments);
 
+        var punches = day?.Punches.OrderBy(p => p.At).ToList() ?? [];
+        var (start, end, worked) = DeriveSpan(punches);
+
+        var credited = day is null ? 0 : SumCreditedMinutes(day.Adjustments);
         var computed = WorkRules.ComputeDay(planned, worked, credited);
 
         return new DayDto(
@@ -31,6 +42,10 @@ public static class Mapping
             IsNonWorkingDay: isNonWorking,
             Note: note,
 
+            Start: start,
+            End: end,
+            PunchCount: punches.Count,
+
             PlannedMinutes: computed.PlannedMinutes,
             WorkedMinutes: computed.WorkedMinutes,
             CreditedMinutes: computed.CreditedMinutes,
@@ -38,11 +53,7 @@ public static class Mapping
             DeltaMinutes: computed.DeltaMinutes,
             FlexCandidate: computed.FlexCandidate,
 
-            Sessions: day?.Sessions
-                .OrderBy(s => s.Start)
-                .Select(s => new SessionDto(s.Id, s.Start, s.End))
-                .ToList() ?? [],
-
+            Punches: punches.Select(p => new PunchDto(p.Id, p.At, p.Note)).ToList(),
             Adjustments: day?.Adjustments
                 .OrderBy(a => a.Kind)
                 .Select(a => new AdjustmentDto(a.Id, a.Kind, a.Minutes, a.Note))
@@ -52,7 +63,7 @@ public static class Mapping
 
     public static async Task<WorkDay?> LoadDay(TimecardDb db, DateOnly date, CancellationToken ct)
         => await db.WorkDays
-            .Include(d => d.Sessions)
+            .Include(d => d.Punches)
             .Include(d => d.Adjustments)
             .FirstOrDefaultAsync(d => d.Date == date, ct);
 

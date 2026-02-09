@@ -5,11 +5,11 @@ const client = createApiClient({ baseUrl: "" }); // 同源，之後要換 server
 
 export const timecardApi = {
     getToday: () => client.request("/api/day/today"),
-    clockIn: () => client.request("/api/clock/in", { method: "POST" }),
-    clockOut: () => client.request("/api/clock/out", { method: "POST" }),
-
-    deleteSession: (id) =>
-        client.request(`/api/sessions/${id}`, { method: "DELETE" }),
+    
+    punch: () => client.request("/api/punch", { method: "POST" }),
+    
+    deletePunch: (id) =>
+        client.request(`/api/punches/${id}`, { method: "DELETE" }),
 
     addAdjustment: (payload) =>
         client.request("/api/adjustments", {

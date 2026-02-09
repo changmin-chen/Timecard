@@ -6,12 +6,11 @@ namespace Timecard.Api.Data;
 public sealed class TimecardDb(DbContextOptions<TimecardDb> options) : DbContext(options)
 {
     public DbSet<WorkDay> WorkDays => Set<WorkDay>();
-    public DbSet<WorkSession> Sessions => Set<WorkSession>();
+    public DbSet<PunchEvent> Punches => Set<PunchEvent>();
     public DbSet<Adjustment> Adjustments => Set<Adjustment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // SQLite 沒有原生 DateOnly，存成 yyyy-MM-dd 字串（簡單可讀）
         var dateOnlyConverter = new ValueConverter<DateOnly, string>(
             d => d.ToString("yyyy-MM-dd"),
             s => DateOnly.Parse(s));
@@ -23,7 +22,7 @@ public sealed class TimecardDb(DbContextOptions<TimecardDb> options) : DbContext
             e.HasIndex(x => x.Date).IsUnique();
             e.Property(x => x.Note).HasMaxLength(4000);
 
-            e.HasMany(x => x.Sessions)
+            e.HasMany(x => x.Punches)
                 .WithOne()
                 .HasForeignKey(x => x.WorkDayId)
                 .OnDelete(DeleteBehavior.Cascade);
@@ -34,10 +33,11 @@ public sealed class TimecardDb(DbContextOptions<TimecardDb> options) : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<WorkSession>(e =>
+        modelBuilder.Entity<PunchEvent>(e =>
         {
             e.HasKey(x => x.Id);
-            e.HasIndex(x => new { x.WorkDayId, x.Start });
+            e.HasIndex(x => new { x.WorkDayId, x.At });
+            e.Property(x => x.Note).HasMaxLength(4000);
         });
 
         modelBuilder.Entity<Adjustment>(e =>

@@ -1,7 +1,6 @@
 namespace Timecard.Api.Domain;
 
 /// <summary>
-/// 公司規則（來自你的規格文件）
 /// 1) 每天 9 小時（包含午休）
 /// 2) 每天彈性時數最多累積/使用 55 分鐘
 /// 3) 彈性時數月重置
@@ -16,7 +15,7 @@ public static class WorkRules
         var effective = workedMinutes + creditedMinutes;
         var delta = effective - plannedMinutes;
 
-        // 免上班日：不累積也不使用彈性（避免奇怪的「放假還賺彈性」）
+        // 免上班日：不累積也不使用彈性（避免「放假還賺彈性」）
         var flexCandidate = plannedMinutes == 0 ? 0 : Math.Clamp(delta, -DailyFlexCapMinutes, DailyFlexCapMinutes);
 
         return new DayComputed(plannedMinutes, workedMinutes, creditedMinutes, effective, delta, flexCandidate);
@@ -44,13 +43,12 @@ public static class WorkRules
                 continue;
             }
 
-            // desired < 0：今天想用彈性提早走
             var need = -desired;
             var used = Math.Min(bank, need);
             bank -= used;
 
-            var applied = -used; // negative
-            var deficit = need - used; // 需要用請假/出差/補登等方式補
+            var applied = -used;         // negative
+            var deficit = need - used;   // 需要用請假/出差/補登等方式補
 
             results.Add(new MonthDayComputed(d.Date, d.Computed, FlexApplied: applied, FlexBankEnd: bank, DeficitMinutes: deficit));
         }

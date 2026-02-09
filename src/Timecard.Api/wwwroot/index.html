@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Timecard MVP</title>
+  <title>Timecard MVP (Punch-only)</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <header class="wrap">
-    <h1>Timecard MVP</h1>
-    <p class="sub">每天 9 小時（含午休），每日彈性±55 分鐘，月重置。是的，人類連時間都要記帳。</p>
+    <h1>Timecard MVP（Punch-only）</h1>
+    <p class="sub">打卡只有「時間戳」。日工時用最早到最晚。中間亂走一律當不存在，因為你也不想記。</p>
   </header>
 
   <main class="wrap">
@@ -20,17 +20,16 @@
           <div id="todaySummary" class="mono small">載入中…</div>
         </div>
         <div class="actions">
-          <button id="btnIn" class="primary">上班（Clock In）</button>
-          <button id="btnOut">下班（Clock Out）</button>
+          <button id="btnPunch" class="primary">打卡（Punch）</button>
           <button id="btnRefresh" class="ghost">重新整理</button>
         </div>
       </div>
 
       <div class="grid2">
         <div>
-          <h3>Sessions</h3>
-          <div id="sessions"></div>
-          <div class="hint">MVP：Session 不跨日。午休已包含在 9 小時規定內，你可以只打「到公司」與「離開公司」。</div>
+          <h3>Punches</h3>
+          <div id="punches"></div>
+          <div class="hint">日 span = 最早 punch → 最晚 punch。若只有 1 筆 punch，工時 = 0（因為你還沒下班）。</div>
         </div>
 
         <div>
@@ -86,7 +85,7 @@
       <div class="row">
         <div>
           <h2>月報表</h2>
-          <div class="hint">預設不含空白日，避免週末被當成欠工時。你如果想被自己氣死，可以勾 includeEmpty。</div>
+          <div class="hint">預設不含空白日，避免週末被當成欠工時。勾 includeEmpty 才會列出整個月。</div>
         </div>
         <div class="actions">
           <input type="month" id="monthPick" />
@@ -104,6 +103,7 @@
           <thead>
             <tr>
               <th>日期</th>
+              <th>Punch數</th>
               <th>規定</th>
               <th>已記錄</th>
               <th>調整</th>

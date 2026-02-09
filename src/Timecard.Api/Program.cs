@@ -2,9 +2,9 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Data;
 using Timecard.Api.Features.Adjustments;
-using Timecard.Api.Features.Clock;
 using Timecard.Api.Features.Days;
 using Timecard.Api.Features.Month;
+using Timecard.Api.Features.Punch;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,14 +16,12 @@ builder.Services.ConfigureHttpJsonOptions(o =>
 
 builder.Services.AddDbContext<TimecardDb>(opt =>
 {
-    var cs = builder.Configuration.GetConnectionString("Timecard") ?? "Data Source=App_Data/timecard.db";
+    var cs = builder.Configuration.GetConnectionString("Timecard") ?? "Data Source=App_Data/timecard_punch.db";
     opt.UseSqlite(cs);
 });
 
 var app = builder.Build();
 
-// 讓你開箱即用：不需要先跑 migration（MVP 取捨）
-// 如果你想正統：改成 db.Database.Migrate();
 Directory.CreateDirectory(Path.Combine(app.Environment.ContentRootPath, "App_Data"));
 using (var scope = app.Services.CreateScope())
 {
@@ -34,7 +32,7 @@ using (var scope = app.Services.CreateScope())
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-app.MapClockEndpoints();
+app.MapPunchEndpoints();
 app.MapDayEndpoints();
 app.MapAdjustmentEndpoints();
 app.MapMonthEndpoints();
