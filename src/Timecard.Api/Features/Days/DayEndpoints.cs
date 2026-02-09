@@ -18,34 +18,34 @@ public static class DayEndpoints
 
     public sealed record NonWorkingRequest(bool IsNonWorkingDay, string? Note);
 
-    private static async Task<IResult> GetToday(TimecardDb db, CancellationToken ct)
+    private static async Task<IResult> GetToday(WorkDayRepository repo, CancellationToken ct)
     {
         var date = DateOnly.FromDateTime(DateTime.Now);
-        var day = await Mapping.LoadDay(db, date, ct);
+        var day = await repo.LoadDay(date, ct);
         return Results.Ok(Mapping.ToDayDto(date, day));
     }
 
-    private static async Task<IResult> GetByDate(TimecardDb db, string date, CancellationToken ct)
+    private static async Task<IResult> GetByDate(WorkDayRepository repo, string date, CancellationToken ct)
     {
         if (!DateOnly.TryParse(date, out var d))
             return Results.BadRequest(new { error = "Invalid date. Use yyyy-MM-dd." });
 
-        var day = await Mapping.LoadDay(db, d, ct);
+        var day = await repo.LoadDay(d, ct);
         return Results.Ok(Mapping.ToDayDto(d, day));
     }
 
-    private static async Task<IResult> SetNonWorking(TimecardDb db, string date, NonWorkingRequest req, CancellationToken ct)
+    private static async Task<IResult> SetNonWorking(TimecardDb db, WorkDayRepository repo, string date, NonWorkingRequest req, CancellationToken ct)
     {
         if (!DateOnly.TryParse(date, out var d))
             return Results.BadRequest(new { error = "Invalid date. Use yyyy-MM-dd." });
 
-        var day = await Mapping.GetOrCreateDay(db, d, ct);
+        var day = await repo.GetOrCreateDay(d, ct);
         day.IsNonWorkingDay = req.IsNonWorkingDay;
         day.Note = req.Note ?? day.Note;
 
         await db.SaveChangesAsync(ct);
 
-        var full = await Mapping.LoadDay(db, d, ct);
+        var full = await repo.LoadDay(d, ct);
         return Results.Ok(Mapping.ToDayDto(d, full));
     }
 }

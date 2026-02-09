@@ -20,6 +20,8 @@ builder.Services.AddDbContext<TimecardDb>(opt =>
     opt.UseSqlite(cs);
 });
 
+builder.Services.AddScoped<WorkDayRepository>();
+
 var app = builder.Build();
 
 Directory.CreateDirectory(Path.Combine(app.Environment.ContentRootPath, "App_Data"));

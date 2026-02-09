@@ -27,12 +27,12 @@ public static class PunchEndpoints
     // MVP 反手滑：同一天距離上一筆 < 30 秒就擋掉（除非 force=true）
     private static readonly TimeSpan MinInterval = TimeSpan.FromSeconds(30);
 
-    private static async Task<IResult> AddPunch(TimecardDb db, PunchCreate? req, CancellationToken ct)
+    private static async Task<IResult> AddPunch(TimecardDb db, WorkDayRepository repo, PunchCreate? req, CancellationToken ct)
     {
         var now = req?.At ?? DateTimeOffset.Now;
         var date = DateOnly.FromDateTime(now.LocalDateTime);
 
-        var day = await Mapping.GetOrCreateDay(db, date, ct);
+        var day = await repo.GetOrCreateDay(date, ct);
 
         var lastAt = (await db.Punches
                 .Where(p => p.WorkDayId == day.Id)
@@ -55,11 +55,11 @@ public static class PunchEndpoints
 
         await db.SaveChangesAsync(ct);
 
-        var full = await Mapping.LoadDay(db, date, ct);
+        var full = await repo.LoadDay(date, ct);
         return Results.Ok(Mapping.ToDayDto(date, full));
     }
 
-    private static async Task<IResult> UpdatePunch(TimecardDb db, int id, PunchUpdate req, CancellationToken ct)
+    private static async Task<IResult> UpdatePunch(TimecardDb db, WorkDayRepository repo, int id, PunchUpdate req, CancellationToken ct)
     {
         var p = await db.Punches.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (p is null) return Results.NotFound();
@@ -75,11 +75,11 @@ public static class PunchEndpoints
 
         await db.SaveChangesAsync(ct);
 
-        var full = await Mapping.LoadDay(db, oldDate, ct);
+        var full = await repo.LoadDay(oldDate, ct);
         return Results.Ok(Mapping.ToDayDto(oldDate, full));
     }
 
-    private static async Task<IResult> DeletePunch(TimecardDb db, int id, CancellationToken ct)
+    private static async Task<IResult> DeletePunch(TimecardDb db, WorkDayRepository repo, int id, CancellationToken ct)
     {
         var p = await db.Punches.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (p is null) return Results.NotFound();
@@ -89,14 +89,14 @@ public static class PunchEndpoints
         db.Punches.Remove(p);
         await db.SaveChangesAsync(ct);
 
-        var full = await Mapping.LoadDay(db, dayDate, ct);
+        var full = await repo.LoadDay(dayDate, ct);
         return Results.Ok(Mapping.ToDayDto(dayDate, full));
     }
 
-    private static async Task<IResult> GetStatus(TimecardDb db, string? date, CancellationToken ct)
+    private static async Task<IResult> GetStatus(WorkDayRepository repo, string? date, CancellationToken ct)
     {
         var d = ParseDateOrToday(date);
-        var day = await Mapping.LoadDay(db, d, ct);
+        var day = await repo.LoadDay(d, ct);
 
         var punches = day?.Punches.OrderBy(p => p.At).ToList() ?? [];
         var (start, end, worked) = Mapping.DeriveSpan(punches);

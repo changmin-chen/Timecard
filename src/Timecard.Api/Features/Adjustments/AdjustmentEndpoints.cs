@@ -20,7 +20,7 @@ public static class AdjustmentEndpoints
     public sealed record AdjustmentCreate(string Date, string Kind, int Minutes, string? Note);
     public sealed record AdjustmentUpdate(string Kind, int Minutes, string? Note);
 
-    private static async Task<IResult> Create(TimecardDb db, AdjustmentCreate req, CancellationToken ct)
+    private static async Task<IResult> Create(TimecardDb db, WorkDayRepository repo, AdjustmentCreate req, CancellationToken ct)
     {
         if (!DateOnly.TryParse(req.Date, out var d))
             return Results.BadRequest(new { error = "Invalid date. Use yyyy-MM-dd." });
@@ -28,7 +28,7 @@ public static class AdjustmentEndpoints
         if (string.IsNullOrWhiteSpace(req.Kind))
             return Results.BadRequest(new { error = "kind is required." });
 
-        var day = await Mapping.GetOrCreateDay(db, d, ct);
+        var day = await repo.GetOrCreateDay(d, ct);
 
         db.Adjustments.Add(new Adjustment
         {
@@ -40,11 +40,11 @@ public static class AdjustmentEndpoints
 
         await db.SaveChangesAsync(ct);
 
-        var full = await Mapping.LoadDay(db, d, ct);
+        var full = await repo.LoadDay(d, ct);
         return Results.Ok(Mapping.ToDayDto(d, full));
     }
 
-    private static async Task<IResult> Update(TimecardDb db, int id, AdjustmentUpdate req, CancellationToken ct)
+    private static async Task<IResult> Update(TimecardDb db, WorkDayRepository repo, int id, AdjustmentUpdate req, CancellationToken ct)
     {
         var a = await db.Adjustments.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (a is null) return Results.NotFound();
@@ -59,11 +59,11 @@ public static class AdjustmentEndpoints
         await db.SaveChangesAsync(ct);
 
         var dayDate = await db.WorkDays.Where(d => d.Id == a.WorkDayId).Select(d => d.Date).FirstAsync(ct);
-        var full = await Mapping.LoadDay(db, dayDate, ct);
+        var full = await repo.LoadDay(dayDate, ct);
         return Results.Ok(Mapping.ToDayDto(dayDate, full));
     }
 
-    private static async Task<IResult> Delete(TimecardDb db, int id, CancellationToken ct)
+    private static async Task<IResult> Delete(TimecardDb db, WorkDayRepository repo, int id, CancellationToken ct)
     {
         var a = await db.Adjustments.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (a is null) return Results.NotFound();
@@ -73,7 +73,7 @@ public static class AdjustmentEndpoints
         db.Adjustments.Remove(a);
         await db.SaveChangesAsync(ct);
 
-        var full = await Mapping.LoadDay(db, dayDate, ct);
+        var full = await repo.LoadDay(dayDate, ct);
         return Results.Ok(Mapping.ToDayDto(dayDate, full));
     }
 }
