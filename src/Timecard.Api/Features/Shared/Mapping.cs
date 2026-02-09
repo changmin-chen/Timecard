@@ -26,24 +26,24 @@ public static class Mapping
         var computed = WorkRules.ComputeDay(planned, worked, credited);
 
         return new DayDto(
-            date: date.ToString("yyyy-MM-dd"),
-            exists: exists,
-            isNonWorkingDay: isNonWorking,
-            note: note,
+            Date: date.ToString("yyyy-MM-dd"),
+            Exists: exists,
+            IsNonWorkingDay: isNonWorking,
+            Note: note,
 
-            plannedMinutes: computed.PlannedMinutes,
-            workedMinutes: computed.WorkedMinutes,
-            creditedMinutes: computed.CreditedMinutes,
-            effectiveMinutes: computed.EffectiveMinutes,
-            deltaMinutes: computed.DeltaMinutes,
-            flexCandidate: computed.FlexCandidate,
+            PlannedMinutes: computed.PlannedMinutes,
+            WorkedMinutes: computed.WorkedMinutes,
+            CreditedMinutes: computed.CreditedMinutes,
+            EffectiveMinutes: computed.EffectiveMinutes,
+            DeltaMinutes: computed.DeltaMinutes,
+            FlexCandidate: computed.FlexCandidate,
 
-            sessions: day?.Sessions
+            Sessions: day?.Sessions
                 .OrderBy(s => s.Start)
                 .Select(s => new SessionDto(s.Id, s.Start, s.End))
                 .ToList() ?? [],
 
-            adjustments: day?.Adjustments
+            Adjustments: day?.Adjustments
                 .OrderBy(a => a.Kind)
                 .Select(a => new AdjustmentDto(a.Id, a.Kind, a.Minutes, a.Note))
                 .ToList() ?? []

@@ -17,15 +17,16 @@ public static class AdjustmentEndpoints
         return app;
     }
 
-    public sealed record AdjustmentCreate(string date, string kind, int minutes, string? note);
-    public sealed record AdjustmentUpdate(string kind, int minutes, string? note);
+    public sealed record AdjustmentCreate(string Date, string Kind, int Minutes, string? Note);
+
+    public sealed record AdjustmentUpdate(string Kind, int Minutes, string? Note);
 
     private static async Task<IResult> Create(TimecardDb db, AdjustmentCreate req, CancellationToken ct)
     {
-        if (!DateOnly.TryParse(req.date, out var d))
+        if (!DateOnly.TryParse(req.Date, out var d))
             return Results.BadRequest(new { error = "Invalid date. Use yyyy-MM-dd." });
 
-        if (string.IsNullOrWhiteSpace(req.kind))
+        if (string.IsNullOrWhiteSpace(req.Kind))
             return Results.BadRequest(new { error = "kind is required." });
 
         var day = await Mapping.GetOrCreateDay(db, d, ct);
@@ -33,9 +34,9 @@ public static class AdjustmentEndpoints
         db.Adjustments.Add(new Adjustment
         {
             WorkDayId = day.Id,
-            Kind = req.kind.Trim(),
-            Minutes = req.minutes,
-            Note = req.note?.Trim() ?? ""
+            Kind = req.Kind.Trim(),
+            Minutes = req.Minutes,
+            Note = req.Note?.Trim() ?? ""
         });
 
         await db.SaveChangesAsync(ct);
@@ -49,12 +50,12 @@ public static class AdjustmentEndpoints
         var a = await db.Adjustments.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (a is null) return Results.NotFound();
 
-        if (string.IsNullOrWhiteSpace(req.kind))
+        if (string.IsNullOrWhiteSpace(req.Kind))
             return Results.BadRequest(new { error = "kind is required." });
 
-        a.Kind = req.kind.Trim();
-        a.Minutes = req.minutes;
-        a.Note = req.note?.Trim() ?? "";
+        a.Kind = req.Kind.Trim();
+        a.Minutes = req.Minutes;
+        a.Note = req.Note?.Trim() ?? "";
 
         await db.SaveChangesAsync(ct);
 

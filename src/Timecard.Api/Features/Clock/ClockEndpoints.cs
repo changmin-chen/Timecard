@@ -17,11 +17,11 @@ public static class ClockEndpoints
         return app;
     }
 
-    public sealed record ClockRequest(DateTimeOffset? at);
+    public sealed record ClockRequest(DateTimeOffset? At);
 
     private static async Task<IResult> ClockIn(TimecardDb db, ClockRequest? req, CancellationToken ct)
     {
-        var now = req?.at ?? DateTimeOffset.Now;
+        var now = req?.At ?? DateTimeOffset.Now;
         var date = DateOnly.FromDateTime(now.LocalDateTime);
 
         var day = await Mapping.GetOrCreateDay(db, date, ct);
@@ -44,7 +44,7 @@ public static class ClockEndpoints
 
     private static async Task<IResult> ClockOut(TimecardDb db, ClockRequest? req, CancellationToken ct)
     {
-        var now = req?.at ?? DateTimeOffset.Now;
+        var now = req?.At ?? DateTimeOffset.Now;
         var date = DateOnly.FromDateTime(now.LocalDateTime);
 
         var day = await db.WorkDays.FirstOrDefaultAsync(d => d.Date == date, ct);

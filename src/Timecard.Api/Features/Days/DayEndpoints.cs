@@ -23,7 +23,7 @@ public static class DayEndpoints
         return app;
     }
 
-    public sealed record NonWorkingRequest(bool isNonWorkingDay, string? note);
+    public sealed record NonWorkingRequest(bool IsNonWorkingDay, string? Note);
 
     private static async Task<IResult> GetToday(TimecardDb db, CancellationToken ct)
     {
@@ -47,8 +47,8 @@ public static class DayEndpoints
             return Results.BadRequest(new { error = "Invalid date. Use yyyy-MM-dd." });
 
         var day = await Mapping.GetOrCreateDay(db, d, ct);
-        day.IsNonWorkingDay = req.isNonWorkingDay;
-        day.Note = req.note ?? day.Note;
+        day.IsNonWorkingDay = req.IsNonWorkingDay;
+        day.Note = req.Note ?? day.Note;
 
         await db.SaveChangesAsync(ct);
 

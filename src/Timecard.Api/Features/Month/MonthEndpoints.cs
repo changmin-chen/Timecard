@@ -51,17 +51,15 @@ public static class MonthEndpoints
             }
         }
 
-        var computedForMonth = days.Select(x =>
-        {
+        var computedForMonth = days.Select(x => {
             var dayDto = Mapping.ToDayDto(x.date, x.day);
-            var dayComputed = WorkRules.ComputeDay(dayDto.plannedMinutes, dayDto.workedMinutes, dayDto.creditedMinutes);
+            var dayComputed = WorkRules.ComputeDay(dayDto.PlannedMinutes, dayDto.WorkedMinutes, dayDto.CreditedMinutes);
             return new DayWithComputed(x.date, dayComputed);
         });
 
         var monthComputed = WorkRules.ComputeMonth(computedForMonth);
 
-        var dtoDays = monthComputed.Days.Select(d =>
-        {
+        var dtoDays = monthComputed.Days.Select(d => {
             // 重新抓 day 的 meta（nonworking/note/exists）
             var day = days.First(x => x.date == d.Date).day;
             var exists = day is not null;
@@ -69,21 +67,19 @@ public static class MonthEndpoints
             var note = day?.Note ?? "";
 
             return new MonthDayDto(
-                date: d.Date.ToString("yyyy-MM-dd"),
-                exists: exists,
-                isNonWorkingDay: isNonWorking,
-                note: note,
-
-                plannedMinutes: d.Day.PlannedMinutes,
-                workedMinutes: d.Day.WorkedMinutes,
-                creditedMinutes: d.Day.CreditedMinutes,
-                effectiveMinutes: d.Day.EffectiveMinutes,
-                deltaMinutes: d.Day.DeltaMinutes,
-                flexCandidate: d.Day.FlexCandidate,
-
-                flexApplied: d.FlexApplied,
-                flexBankEnd: d.FlexBankEnd,
-                deficitMinutes: d.DeficitMinutes
+            Date: d.Date.ToString("yyyy-MM-dd"),
+            Exists: exists,
+            IsNonWorkingDay: isNonWorking,
+            Note: note,
+            PlannedMinutes: d.Day.PlannedMinutes,
+            WorkedMinutes: d.Day.WorkedMinutes,
+            CreditedMinutes: d.Day.CreditedMinutes,
+            EffectiveMinutes: d.Day.EffectiveMinutes,
+            DeltaMinutes: d.Day.DeltaMinutes,
+            FlexCandidate: d.Day.FlexCandidate,
+            FlexApplied: d.FlexApplied,
+            FlexBankEnd: d.FlexBankEnd,
+            DeficitMinutes: d.DeficitMinutes
             );
         }).ToList();
 
