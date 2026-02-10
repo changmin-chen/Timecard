@@ -31,14 +31,14 @@ function withErrorHandling(asyncFn) {
 
 
 function setTodayInputs(dateStr) {
-    $("#adjDate").value = dateStr;
+    $("#arDate").value = dateStr;
     $("#nwDate").value = dateStr;
 }
 
 function renderDay(day) {
     const span = `start=${day.start ?? "null"} end=${day.end ?? "null"} punches=${day.punchCount}`;
     $("#todaySummary").textContent =
-        `date=${day.date} ${span} planned=${day.plannedMinutes} worked=${day.workedMinutes} credited=${day.creditedMinutes} effective=${day.effectiveMinutes} delta=${mins(day.deltaMinutes)} flexCandidate=${mins(day.flexCandidate)}`;
+        `date=${day.date} ${span} planned=${day.plannedMinutes} worked=${day.workedMinutes} extension=${day.extensionMinutes} effective=${day.effectiveMinutes} delta=${mins(day.deltaMinutes)} flexCandidate=${mins(day.flexCandidate)}`;
 
     // nonworking reflect
     $("#nwDate").value = day.date;
@@ -66,24 +66,24 @@ function renderDay(day) {
         }
     }
 
-    // adjustments
-    const adjs = $("#adjustments");
-    adjs.innerHTML = "";
-    if (!day.adjustments.length) {
-        adjs.innerHTML = `<div class="hint">尚無調整。</div>`;
+    // attendance requests
+    const arList = $("#attendanceRequests");
+    arList.innerHTML = "";
+    if (!day.attendanceRequests.length) {
+        arList.innerHTML = `<div class="hint">尚無出勤申請。</div>`;
     } else {
-        for (const a of day.adjustments) {
+        for (const a of day.attendanceRequests) {
             const el = document.createElement("div");
             el.className = "item";
             el.innerHTML = `
         <div class="meta">
-          <div class="title">#${a.id} [${a.kind}] minutes=${mins(a.minutes)}</div>
+          <div class="title">#${a.id} [${a.category}] ${a.start} ~ ${a.end}</div>
           <div class="sub">${a.note || ""}</div>
         </div>
         <div class="right">
-          <button class="danger" data-del-adj="${a.id}">刪除</button>
+          <button class="danger" data-del-ar="${a.id}">刪除</button>
         </div>`;
-            adjs.appendChild(el);
+            arList.appendChild(el);
         }
     }
 }
@@ -104,20 +104,21 @@ async function deletePunch(id) {
     renderDay(day);
 }
 
-async function addAdjustment(e) {
+async function addAttendanceRequest(e) {
     e.preventDefault();
     const payload = {
-        date: $("#adjDate").value,
-        kind: $("#adjKind").value.trim(),
-        minutes: Number($("#adjMinutes").value || 0),
-        note: $("#adjNote").value.trim()
+        date: $("#arDate").value,
+        category: $("#arCategory").value.trim(),
+        start: $("#arStart").value,
+        end: $("#arEnd").value,
+        note: $("#arNote").value.trim()
     };
-    const day = await timecardApi.addAdjustment(payload);
+    const day = await timecardApi.addAttendanceRequest(payload);
     renderDay(day);
 }
 
-async function deleteAdjustment(id) {
-    const day = await timecardApi.deleteAdjustment(id);
+async function deleteAttendanceRequest(id) {
+    const day = await timecardApi.deleteAttendanceRequest(id);
     renderDay(day);
 }
 
@@ -146,7 +147,7 @@ function renderMonth(m) {
       <td class="mono">${d.punchCount}</td>
       <td class="mono">${d.plannedMinutes}</td>
       <td class="mono">${d.workedMinutes}</td>
-      <td class="mono">${mins(d.creditedMinutes)}</td>
+      <td class="mono">${mins(d.extensionMinutes)}</td>
       <td class="mono">${d.effectiveMinutes}</td>
       <td class="mono ${deltaCls}">${mins(d.deltaMinutes)}</td>
       <td class="mono">${mins(d.flexCandidate)}</td>
@@ -180,15 +181,15 @@ document.addEventListener("click", async (e) => {
     if (t?.dataset?.delPunch) {
         await withErrorHandling(deletePunch)(t.dataset.delPunch);
     }
-    if (t?.dataset?.delAdj) {
-        await withErrorHandling(deleteAdjustment)(t.dataset.delAdj);
+    if (t?.dataset?.delAr) {
+        await withErrorHandling(deleteAttendanceRequest)(t.dataset.delAr);
     }
 });
 
 $("#btnPunch").addEventListener("click", withErrorHandling(punch));
 $("#btnRefresh").addEventListener("click", withErrorHandling(refreshToday));
 
-$("#adjForm").addEventListener("submit", withErrorHandling(addAdjustment));
+$("#arForm").addEventListener("submit", withErrorHandling(addAttendanceRequest));
 $("#nonWorkForm").addEventListener("submit", withErrorHandling(setNonWorking));
 
 $("#btnMonth").addEventListener("click", withErrorHandling(loadMonth));

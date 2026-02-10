@@ -33,26 +33,30 @@
         </div>
 
         <div>
-          <h3>調整（請假 / 出差 / 假日 / 颱風假…）</h3>
-          <form id="adjForm" class="form">
+          <h3>出勤申請（請假 / 出差 / 假日 / 颱風假…）</h3>
+          <form id="arForm" class="form">
             <label>
               日期
-              <input type="date" id="adjDate" required />
+              <input type="date" id="arDate" required />
             </label>
             <label>
-              類型
-              <input type="text" id="adjKind" value="Leave" placeholder="Leave / Trip / Holiday / Typhoon / Manual" required />
+              類別
+              <input type="text" id="arCategory" value="Leave" placeholder="Leave / Trip / Holiday / Typhoon" required />
             </label>
             <label>
-              分鐘（可正可負）
-              <input type="number" id="adjMinutes" value="540" />
+              起始時間
+              <input type="time" id="arStart" required />
+            </label>
+            <label>
+              結束時間
+              <input type="time" id="arEnd" required />
             </label>
             <label>
               註記
-              <input type="text" id="adjNote" placeholder="可留空" />
+              <input type="text" id="arNote" placeholder="可留空" />
             </label>
             <div class="actions">
-              <button type="submit" class="primary">新增調整</button>
+              <button type="submit" class="primary">新增出勤申請</button>
             </div>
           </form>
 
@@ -75,8 +79,8 @@
             </div>
           </form>
 
-          <h3 class="mt">Adjustments 列表</h3>
-          <div id="adjustments"></div>
+          <h3 class="mt">出勤申請列表</h3>
+          <div id="attendanceRequests"></div>
         </div>
       </div>
     </section>
@@ -106,7 +110,7 @@
               <th>Punch數</th>
               <th>規定</th>
               <th>已記錄</th>
-              <th>調整</th>
+              <th>延伸</th>
               <th>有效</th>
               <th>差額</th>
               <th>彈性候選</th>

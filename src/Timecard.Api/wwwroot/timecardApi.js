@@ -5,21 +5,21 @@ const client = createApiClient({ baseUrl: "" }); // 同源，之後要換 server
 
 export const timecardApi = {
     getToday: () => client.request("/api/day/today"),
-    
+
     punch: () => client.request("/api/punch", { method: "POST" }),
-    
+
     deletePunch: (id) =>
         client.request(`/api/punches/${id}`, { method: "DELETE" }),
 
-    addAdjustment: (payload) =>
-        client.request("/api/adjustments", {
+    addAttendanceRequest: (payload) =>
+        client.request("/api/attendance-requests", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
         }),
 
-    deleteAdjustment: (id) =>
-        client.request(`/api/adjustments/${id}`, { method: "DELETE" }),
+    deleteAttendanceRequest: (id) =>
+        client.request(`/api/attendance-requests/${id}`, { method: "DELETE" }),
 
     setNonWorking: (date, payload) =>
         client.request(`/api/day/${date}/nonworking`, {

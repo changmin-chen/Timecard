@@ -16,8 +16,8 @@ public static class Mapping
         var punches = day?.Punches.OrderBy(p => p.At).ToList() ?? [];
         var (start, end, worked) = day?.DeriveSpan() ?? (null, null, 0);
 
-        var credited = day?.CreditedMinutes ?? 0;
-        var computed = WorkRules.ComputeDay(planned, worked, credited);
+        var extension = day?.CalculateExtensionMinutes() ?? 0;
+        var computed = WorkRules.ComputeDay(planned, worked, extension);
 
         return new DayDto(
         Date: date.ToString("yyyy-MM-dd"),
@@ -29,14 +29,14 @@ public static class Mapping
         PunchCount: punches.Count,
         PlannedMinutes: computed.PlannedMinutes,
         WorkedMinutes: computed.WorkedMinutes,
-        CreditedMinutes: computed.CreditedMinutes,
+        ExtensionMinutes: computed.CreditedMinutes,
         EffectiveMinutes: computed.EffectiveMinutes,
         DeltaMinutes: computed.DeltaMinutes,
         FlexCandidate: computed.FlexCandidate,
         Punches: punches.Select(p => new PunchDto(p.Id, p.At, p.Note)).ToList(),
-        Adjustments: day?.Adjustments
-            .OrderBy(a => a.Kind)
-            .Select(a => new AdjustmentDto(a.Id, a.Kind, a.Minutes, a.Note))
+        AttendanceRequests: day?.AttendanceRequests
+            .OrderBy(a => a.Start)
+            .Select(a => new AttendanceRequestDto(a.Id, a.Category, a.Start.ToString("HH:mm"), a.End.ToString("HH:mm"), a.Note))
             .ToList() ?? []
         );
     }

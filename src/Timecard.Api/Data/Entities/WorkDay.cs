@@ -1,9 +1,9 @@
-﻿namespace Timecard.Api.Data.Entities;
+namespace Timecard.Api.Data.Entities;
 
 public sealed class WorkDay
 {
     private readonly List<PunchEvent> _punches = [];
-    private readonly List<Adjustment> _adjustments = [];
+    private readonly List<AttendanceRequest> _attendanceRequests = [];
 
     private WorkDay()
     {
@@ -21,7 +21,7 @@ public sealed class WorkDay
     public string Note { get; private set; } = "";
 
     public IReadOnlyList<PunchEvent> Punches => _punches;
-    public IReadOnlyList<Adjustment> Adjustments => _adjustments;
+    public IReadOnlyList<AttendanceRequest> AttendanceRequests => _attendanceRequests;
 
     public void SetNonWorking(bool isNonWorkingDay, string? note)
     {
@@ -53,36 +53,54 @@ public sealed class WorkDay
         return DomainResult.Ok();
     }
 
-    public DomainResult<Adjustment> AddAdjustment(string kind, int minutes, string? note)
+    public DomainResult<AttendanceRequest> AddAttendanceRequest(string category, TimeOnly start, TimeOnly end, string? note)
     {
-        if (string.IsNullOrWhiteSpace(kind))
-            return "kind is required.";
+        if (string.IsNullOrWhiteSpace(category))
+            return "Category is required.";
 
-        var adjustment = new Adjustment(kind, minutes, note);
-        _adjustments.Add(adjustment);
-        return DomainResult<Adjustment>.Ok(adjustment);
+        if (start >= end)
+            return "Start must be before End.";
+
+        var overlapCheck = CheckOverlap(start, end, excludeId: null);
+        if (!overlapCheck.IsSuccess) return overlapCheck.Error!.Message;
+
+        var gapCheck = CheckGaps(start, end, excludeId: null);
+        if (!gapCheck.IsSuccess) return gapCheck.Error!.Message;
+
+        var request = new AttendanceRequest(category, start, end, note);
+        _attendanceRequests.Add(request);
+        return DomainResult<AttendanceRequest>.Ok(request);
     }
 
-    public DomainResult UpdateAdjustment(int adjustmentId, string kind, int minutes, string? note)
+    public DomainResult UpdateAttendanceRequest(int id, string category, TimeOnly start, TimeOnly end, string? note)
     {
-        if (string.IsNullOrWhiteSpace(kind))
-            return "kind is required.";
+        if (string.IsNullOrWhiteSpace(category))
+            return "Category is required.";
 
-        var adjustment = _adjustments.FirstOrDefault(a => a.Id == adjustmentId);
-        if (adjustment is null)
-            return "Adjustment not found.";
+        if (start >= end)
+            return "Start must be before End.";
 
-        adjustment.Update(kind, minutes, note);
+        var request = _attendanceRequests.FirstOrDefault(a => a.Id == id);
+        if (request is null)
+            return "Attendance request not found.";
+
+        var overlapCheck = CheckOverlap(start, end, excludeId: id);
+        if (!overlapCheck.IsSuccess) return overlapCheck.Error!.Message;
+
+        var gapCheck = CheckGaps(start, end, excludeId: id);
+        if (!gapCheck.IsSuccess) return gapCheck.Error!.Message;
+
+        request.Update(category, start, end, note);
         return DomainResult.Ok();
     }
 
-    public DomainResult RemoveAdjustment(int adjustmentId)
+    public DomainResult RemoveAttendanceRequest(int id)
     {
-        var adjustment = _adjustments.FirstOrDefault(a => a.Id == adjustmentId);
-        if (adjustment is null)
-            return "Adjustment not found.";
+        var request = _attendanceRequests.FirstOrDefault(a => a.Id == id);
+        if (request is null)
+            return "Attendance request not found.";
 
-        _adjustments.Remove(adjustment);
+        _attendanceRequests.Remove(request);
         return DomainResult.Ok();
     }
 
@@ -99,7 +117,95 @@ public sealed class WorkDay
         return (start, end, workedMinutes);
     }
 
-    public int CreditedMinutes => _adjustments.Sum(a => a.Minutes);
+    public int CalculateExtensionMinutes()
+    {
+        var ordered = _punches.OrderBy(p => p.At).ToList();
+        var hasPunchSpan = ordered.Count >= 2;
+        var hasRequests = _attendanceRequests.Count > 0;
+
+        if (!hasPunchSpan && !hasRequests) return 0;
+
+        TimeOnly? punchStart = null;
+        TimeOnly? punchEnd = null;
+
+        if (hasPunchSpan)
+        {
+            punchStart = TimeOnly.FromDateTime(ordered[0].At.LocalDateTime);
+            punchEnd = TimeOnly.FromDateTime(ordered[^1].At.LocalDateTime);
+        }
+
+        var allStarts = _attendanceRequests.Select(r => r.Start).ToList();
+        var allEnds = _attendanceRequests.Select(r => r.End).ToList();
+
+        if (punchStart.HasValue) allStarts.Add(punchStart.Value);
+        if (punchEnd.HasValue) allEnds.Add(punchEnd.Value);
+
+        var effectiveStart = allStarts.Min();
+        var effectiveEnd = allEnds.Max();
+
+        var totalSpan = (effectiveEnd - effectiveStart).TotalMinutes;
+
+        if (hasPunchSpan)
+        {
+            var punchSpan = (punchEnd!.Value - punchStart!.Value).TotalMinutes;
+            return (int)(totalSpan - punchSpan);
+        }
+
+        // No punch span: entire effective range is extension
+        return (int)totalSpan;
+    }
+
+    private DomainResult CheckOverlap(TimeOnly start, TimeOnly end, int? excludeId)
+    {
+        foreach (var existing in _attendanceRequests)
+        {
+            if (excludeId.HasValue && existing.Id == excludeId.Value) continue;
+
+            if (start < existing.End && end > existing.Start)
+                return "Attendance request overlaps with an existing one.";
+        }
+
+        return DomainResult.Ok();
+    }
+
+    private DomainResult CheckGaps(TimeOnly newStart, TimeOnly newEnd, int? excludeId)
+    {
+        var segments = new List<(TimeOnly Start, TimeOnly End)>();
+
+        // Add punch span if available
+        var ordered = _punches.OrderBy(p => p.At).ToList();
+        if (ordered.Count >= 2)
+        {
+            var ps = TimeOnly.FromDateTime(ordered[0].At.LocalDateTime);
+            var pe = TimeOnly.FromDateTime(ordered[^1].At.LocalDateTime);
+            segments.Add((ps, pe));
+        }
+
+        // Add existing attendance requests (excluding the one being updated)
+        foreach (var r in _attendanceRequests)
+        {
+            if (excludeId.HasValue && r.Id == excludeId.Value) continue;
+            segments.Add((r.Start, r.End));
+        }
+
+        // Add the new/updated request
+        segments.Add((newStart, newEnd));
+
+        // If there's only one segment, no gaps possible
+        if (segments.Count <= 1)
+            return DomainResult.Ok();
+
+        // Sort by start time and check for gaps
+        segments.Sort((a, b) => a.Start.CompareTo(b.Start));
+
+        for (int i = 1; i < segments.Count; i++)
+        {
+            if (segments[i].Start > segments[i - 1].End)
+                return "There is a gap between time segments. Attendance requests must be contiguous with punch time.";
+        }
+
+        return DomainResult.Ok();
+    }
 
     private DomainResult ValidatePunchDate(DateTimeOffset at)
     {

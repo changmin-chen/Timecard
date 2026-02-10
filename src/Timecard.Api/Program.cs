@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Data;
-using Timecard.Api.Features.Adjustments;
+using Timecard.Api.Features.AttendanceRequests;
 using Timecard.Api.Features.Days;
 using Timecard.Api.Features.Month;
 using Timecard.Api.Features.Punch;
@@ -36,7 +36,7 @@ app.UseStaticFiles();
 
 app.MapPunchEndpoints();
 app.MapDayEndpoints();
-app.MapAdjustmentEndpoints();
+app.MapAttendanceRequestEndpoints();
 app.MapMonthEndpoints();
 
 app.Run();

@@ -8,13 +8,17 @@ public sealed class TimecardDb(DbContextOptions<TimecardDb> options) : DbContext
 {
     public DbSet<WorkDay> WorkDays => Set<WorkDay>();
     public DbSet<PunchEvent> Punches => Set<PunchEvent>();
-    public DbSet<Adjustment> Adjustments => Set<Adjustment>();
+    public DbSet<AttendanceRequest> AttendanceRequests => Set<AttendanceRequest>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         var dateOnlyConverter = new ValueConverter<DateOnly, string>(
             d => d.ToString("yyyy-MM-dd"),
             s => DateOnly.Parse(s));
+
+        var timeOnlyConverter = new ValueConverter<TimeOnly, string>(
+            t => t.ToString("HH:mm"),
+            s => TimeOnly.Parse(s));
 
         modelBuilder.Entity<WorkDay>(e =>
         {
@@ -26,7 +30,7 @@ public sealed class TimecardDb(DbContextOptions<TimecardDb> options) : DbContext
 
             e.Metadata.FindNavigation(nameof(WorkDay.Punches))!
                 .SetPropertyAccessMode(PropertyAccessMode.Field);
-            e.Metadata.FindNavigation(nameof(WorkDay.Adjustments))!
+            e.Metadata.FindNavigation(nameof(WorkDay.AttendanceRequests))!
                 .SetPropertyAccessMode(PropertyAccessMode.Field);
 
             e.HasMany(x => x.Punches)
@@ -34,7 +38,7 @@ public sealed class TimecardDb(DbContextOptions<TimecardDb> options) : DbContext
                 .HasForeignKey(x => x.WorkDayId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            e.HasMany(x => x.Adjustments)
+            e.HasMany(x => x.AttendanceRequests)
                 .WithOne()
                 .HasForeignKey(x => x.WorkDayId)
                 .OnDelete(DeleteBehavior.Cascade);
@@ -49,14 +53,15 @@ public sealed class TimecardDb(DbContextOptions<TimecardDb> options) : DbContext
             e.Property(x => x.At);
         });
 
-        modelBuilder.Entity<Adjustment>(e =>
+        modelBuilder.Entity<AttendanceRequest>(e =>
         {
             e.HasKey(x => x.Id);
-            e.Property(x => x.Kind).HasMaxLength(64);
+            e.Property(x => x.Category).HasMaxLength(64);
             e.Property(x => x.Note).HasMaxLength(4000);
             e.Property(x => x.WorkDayId);
-            e.Property(x => x.Minutes);
-            e.HasIndex(x => new { x.WorkDayId, x.Kind });
+            e.Property(x => x.Start).HasConversion(timeOnlyConverter);
+            e.Property(x => x.End).HasConversion(timeOnlyConverter);
+            e.HasIndex(x => new { x.WorkDayId, x.Category });
         });
     }
 }

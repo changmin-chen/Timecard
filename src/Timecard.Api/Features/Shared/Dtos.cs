@@ -1,7 +1,7 @@
 namespace Timecard.Api.Features.Shared;
 
 public sealed record PunchDto(int Id, DateTimeOffset At, string Note);
-public sealed record AdjustmentDto(int Id, string Kind, int Minutes, string Note);
+public sealed record AttendanceRequestDto(int Id, string Category, string Start, string End, string Note);
 
 public sealed record DayDto(
     string Date, // yyyy-MM-dd
@@ -15,13 +15,13 @@ public sealed record DayDto(
 
     int PlannedMinutes,
     int WorkedMinutes,
-    int CreditedMinutes,
+    int ExtensionMinutes,
     int EffectiveMinutes,
     int DeltaMinutes,
     int FlexCandidate,
 
     IReadOnlyList<PunchDto> Punches,
-    IReadOnlyList<AdjustmentDto> Adjustments
+    IReadOnlyList<AttendanceRequestDto> AttendanceRequests
 );
 
 public sealed record MonthDayDto(
@@ -34,7 +34,7 @@ public sealed record MonthDayDto(
 
     int PlannedMinutes,
     int WorkedMinutes,
-    int CreditedMinutes,
+    int ExtensionMinutes,
     int EffectiveMinutes,
     int DeltaMinutes,
     int FlexCandidate,
@@ -50,4 +50,3 @@ public sealed record MonthDto(
     int FlexBankEnd,
     IReadOnlyList<MonthDayDto> Days
 );
-
