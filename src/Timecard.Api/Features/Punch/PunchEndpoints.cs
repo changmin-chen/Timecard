@@ -26,7 +26,7 @@ public static class PunchEndpoints
 
     private static async Task<IResult> AddPunch(WorkDayRepository repo, PunchCreate? req, CancellationToken ct)
     {
-        var now = req?.At ?? DateTimeOffset.Now;
+        var now = req?.At ?? DateTimeOffset.UtcNow;
         var date = DateOnly.FromDateTime(now.LocalDateTime);
         var day = await repo.GetOrCreateDay(date, ct);
 
