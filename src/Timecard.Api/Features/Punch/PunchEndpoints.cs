@@ -15,14 +15,12 @@ public static class PunchEndpoints
         g.MapGet("/status", GetStatus);
 
         var p = app.MapGroup("/api/punches").WithTags("Punches");
-        p.MapPut("/{id:int}", UpdatePunch);
         p.MapDelete("/{id:int}", DeletePunch);
 
         return app;
     }
 
     public sealed record PunchCreate(DateTimeOffset? At, string? Note, bool Force);
-    public sealed record PunchUpdate(DateTimeOffset At, string? Note);
 
     private static async Task<IResult> AddPunch(WorkDayRepository repo, PunchCreate? req, CancellationToken ct)
     {
@@ -31,18 +29,6 @@ public static class PunchEndpoints
         var day = await repo.GetOrCreateDay(date, ct);
 
         var result = day.AddPunch(now, req?.Note, MinInterval, req?.Force == true);
-        if (result.ToErrorResult() is { } err) return err;
-
-        await repo.SaveChangesAsync(ct);
-        return Results.Ok(Mapping.ToDayDto(day));
-    }
-
-    private static async Task<IResult> UpdatePunch(WorkDayRepository repo, int id, PunchUpdate req, CancellationToken ct)
-    {
-        var day = await repo.LoadByPunchId(id, ct);
-        if (day is null) return Results.NotFound();
-
-        var result = day.UpdatePunch(id, req.At, req.Note);
         if (result.ToErrorResult() is { } err) return err;
 
         await repo.SaveChangesAsync(ct);

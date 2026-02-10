@@ -43,19 +43,6 @@ public sealed class WorkDay
         return DomainResult<PunchEvent>.Ok(punch);
     }
 
-    public DomainResult UpdatePunch(int punchId, DateTimeOffset at, string? note)
-    {
-        var dateCheck = ValidatePunchDate(at);
-        if (!dateCheck.IsSuccess) return dateCheck;
-
-        var punch = _punches.FirstOrDefault(p => p.Id == punchId);
-        if (punch is null)
-            return DomainResult.Fail("not_found", "Punch not found.");
-
-        punch.Update(at, note);
-        return DomainResult.Ok();
-    }
-
     public DomainResult RemovePunch(int punchId)
     {
         var punch = _punches.FirstOrDefault(p => p.Id == punchId);
