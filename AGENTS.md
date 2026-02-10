@@ -20,6 +20,14 @@
 - Keep endpoint mapping organized by feature folder and extension methods (for example `MapPunchEndpoints`).
 - Frontend JS/CSS in `wwwroot/` should stay framework-free and modular (`api.js`, feature-specific logic, shared styles).
 
+## Encoding Rules (Critical)
+- All text files must be UTF-8. Prefer UTF-8 without BOM when writing via scripts.
+- Never use PowerShell `Set-Content` or `Out-File` without an explicit encoding.
+- PowerShell writes must use one of these patterns:
+  - `Set-Content -Path <file> -Value <content> -Encoding UTF8`
+  - `[System.IO.File]::WriteAllText(<file>, <content>, [System.Text.UTF8Encoding]::new($false))`
+- If CJK text is involved, prefer `[System.IO.File]::ReadAllText(..., [System.Text.Encoding]::UTF8)` and `WriteAllText(..., UTF8Encoding($false))` to avoid mojibake.
+
 ## Testing Guidelines
 - Framework: xUnit (`[Fact]` tests).
 - Name tests as `MethodOrScenario_Condition_ExpectedResult` (e.g., `Workday_PositiveDelta_CapsAt55`).
