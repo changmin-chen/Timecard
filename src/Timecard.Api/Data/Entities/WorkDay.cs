@@ -29,68 +29,74 @@ public sealed class WorkDay
         Note = note?.Trim() ?? "";
     }
 
-    public PunchEvent AddPunch(DateTimeOffset at, string? note, TimeSpan minInterval, bool force)
+    public DomainResult<PunchEvent> AddPunch(DateTimeOffset at, string? note, TimeSpan minInterval, bool force)
     {
-        EnsurePunchDateMatchesWorkDay(at);
+        var dateCheck = ValidatePunchDate(at);
+        if (!dateCheck.IsSuccess) return DomainResult<PunchEvent>.Fail(dateCheck.Error!.Code, dateCheck.Error!.Message);
 
         var last = _punches.OrderByDescending(p => p.At).FirstOrDefault();
         if (!force && last is not null && (at - last.At) < minInterval)
-            throw new InvalidOperationException("Too fast. Please wait before creating another punch.");
+            return DomainResult<PunchEvent>.Fail("too_fast", "Too fast. Please wait before creating another punch.");
 
         var punch = new PunchEvent(at, note);
         _punches.Add(punch);
-        return punch;
+        return DomainResult<PunchEvent>.Ok(punch);
     }
 
-    public void UpdatePunch(int punchId, DateTimeOffset at, string? note)
+    public DomainResult UpdatePunch(int punchId, DateTimeOffset at, string? note)
     {
-        EnsurePunchDateMatchesWorkDay(at);
+        var dateCheck = ValidatePunchDate(at);
+        if (!dateCheck.IsSuccess) return dateCheck;
 
         var punch = _punches.FirstOrDefault(p => p.Id == punchId);
         if (punch is null)
-            throw new KeyNotFoundException("Punch not found.");
+            return DomainResult.Fail("not_found", "Punch not found.");
 
         punch.Update(at, note);
+        return DomainResult.Ok();
     }
 
-    public void RemovePunch(int punchId)
+    public DomainResult RemovePunch(int punchId)
     {
         var punch = _punches.FirstOrDefault(p => p.Id == punchId);
         if (punch is null)
-            throw new KeyNotFoundException("Punch not found.");
+            return DomainResult.Fail("not_found", "Punch not found.");
 
         _punches.Remove(punch);
+        return DomainResult.Ok();
     }
 
-    public Adjustment AddAdjustment(string kind, int minutes, string? note)
+    public DomainResult<Adjustment> AddAdjustment(string kind, int minutes, string? note)
     {
         if (string.IsNullOrWhiteSpace(kind))
-            throw new InvalidOperationException("kind is required.");
+            return DomainResult<Adjustment>.Fail("kind_required", "kind is required.");
 
         var adjustment = new Adjustment(kind, minutes, note);
         _adjustments.Add(adjustment);
-        return adjustment;
+        return DomainResult<Adjustment>.Ok(adjustment);
     }
 
-    public void UpdateAdjustment(int adjustmentId, string kind, int minutes, string? note)
+    public DomainResult UpdateAdjustment(int adjustmentId, string kind, int minutes, string? note)
     {
         if (string.IsNullOrWhiteSpace(kind))
-            throw new InvalidOperationException("kind is required.");
+            return DomainResult.Fail("kind_required", "kind is required.");
 
         var adjustment = _adjustments.FirstOrDefault(a => a.Id == adjustmentId);
         if (adjustment is null)
-            throw new KeyNotFoundException("Adjustment not found.");
+            return DomainResult.Fail("not_found", "Adjustment not found.");
 
         adjustment.Update(kind, minutes, note);
+        return DomainResult.Ok();
     }
 
-    public void RemoveAdjustment(int adjustmentId)
+    public DomainResult RemoveAdjustment(int adjustmentId)
     {
         var adjustment = _adjustments.FirstOrDefault(a => a.Id == adjustmentId);
         if (adjustment is null)
-            throw new KeyNotFoundException("Adjustment not found.");
+            return DomainResult.Fail("not_found", "Adjustment not found.");
 
         _adjustments.Remove(adjustment);
+        return DomainResult.Ok();
     }
 
     public (DateTimeOffset? Start, DateTimeOffset? End, int WorkedMinutes) DeriveSpan()
@@ -108,10 +114,12 @@ public sealed class WorkDay
 
     public int CreditedMinutes => _adjustments.Sum(a => a.Minutes);
 
-    private void EnsurePunchDateMatchesWorkDay(DateTimeOffset at)
+    private DomainResult ValidatePunchDate(DateTimeOffset at)
     {
         var punchDate = DateOnly.FromDateTime(at.LocalDateTime);
         if (punchDate != Date)
-            throw new InvalidOperationException("Changing punch date is not supported in MVP.");
+            return DomainResult.Fail("date_mismatch", "Changing punch date is not supported in MVP.");
+
+        return DomainResult.Ok();
     }
 }

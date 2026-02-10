@@ -30,14 +30,8 @@ public static class PunchEndpoints
         var date = DateOnly.FromDateTime(now.LocalDateTime);
         var day = await repo.GetOrCreateDay(date, ct);
 
-        try
-        {
-            day.AddPunch(now, req?.Note, MinInterval, req?.Force == true);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Results.BadRequest(new { error = ex.Message });
-        }
+        var result = day.AddPunch(now, req?.Note, MinInterval, req?.Force == true);
+        if (result.ToErrorResult() is { } err) return err;
 
         await repo.SaveChangesAsync(ct);
         return Results.Ok(Mapping.ToDayDto(day));
@@ -48,18 +42,8 @@ public static class PunchEndpoints
         var day = await repo.LoadByPunchId(id, ct);
         if (day is null) return Results.NotFound();
 
-        try
-        {
-            day.UpdatePunch(id, req.At, req.Note);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Results.BadRequest(new { error = ex.Message });
-        }
-        catch (KeyNotFoundException)
-        {
-            return Results.NotFound();
-        }
+        var result = day.UpdatePunch(id, req.At, req.Note);
+        if (result.ToErrorResult() is { } err) return err;
 
         await repo.SaveChangesAsync(ct);
         return Results.Ok(Mapping.ToDayDto(day));
@@ -70,14 +54,8 @@ public static class PunchEndpoints
         var day = await repo.LoadByPunchId(id, ct);
         if (day is null) return Results.NotFound();
 
-        try
-        {
-            day.RemovePunch(id);
-        }
-        catch (KeyNotFoundException)
-        {
-            return Results.NotFound();
-        }
+        var result = day.RemovePunch(id);
+        if (result.ToErrorResult() is { } err) return err;
 
         await repo.SaveChangesAsync(ct);
         return Results.Ok(Mapping.ToDayDto(day));

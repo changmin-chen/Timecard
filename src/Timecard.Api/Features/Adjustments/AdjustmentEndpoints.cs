@@ -1,5 +1,4 @@
 using Timecard.Api.Data;
-using Timecard.Api.Data.Entities;
 using Timecard.Api.Features.Shared;
 
 namespace Timecard.Api.Features.Adjustments;
@@ -27,14 +26,8 @@ public static class AdjustmentEndpoints
 
         var day = await repo.GetOrCreateDay(d, ct);
 
-        try
-        {
-            day.AddAdjustment(req.Kind, req.Minutes, req.Note);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Results.BadRequest(new { error = ex.Message });
-        }
+        var result = day.AddAdjustment(req.Kind, req.Minutes, req.Note);
+        if (result.ToErrorResult() is { } err) return err;
 
         await repo.SaveChangesAsync(ct);
         return Results.Ok(Mapping.ToDayDto(day));
@@ -45,18 +38,8 @@ public static class AdjustmentEndpoints
         var day = await repo.LoadByAdjustmentId(id, ct);
         if (day is null) return Results.NotFound();
 
-        try
-        {
-            day.UpdateAdjustment(id, req.Kind, req.Minutes, req.Note);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Results.BadRequest(new { error = ex.Message });
-        }
-        catch (KeyNotFoundException)
-        {
-            return Results.NotFound();
-        }
+        var result = day.UpdateAdjustment(id, req.Kind, req.Minutes, req.Note);
+        if (result.ToErrorResult() is { } err) return err;
 
         await repo.SaveChangesAsync(ct);
         return Results.Ok(Mapping.ToDayDto(day));
@@ -67,14 +50,8 @@ public static class AdjustmentEndpoints
         var day = await repo.LoadByAdjustmentId(id, ct);
         if (day is null) return Results.NotFound();
 
-        try
-        {
-            day.RemoveAdjustment(id);
-        }
-        catch (KeyNotFoundException)
-        {
-            return Results.NotFound();
-        }
+        var result = day.RemoveAdjustment(id);
+        if (result.ToErrorResult() is { } err) return err;
 
         await repo.SaveChangesAsync(ct);
         return Results.Ok(Mapping.ToDayDto(day));

@@ -6,7 +6,7 @@ namespace Timecard.Tests;
 public class WorkDayAggregateTests
 {
     [Fact]
-    public void AddPunch_SameDateWithinIntervalWithoutForce_Throws()
+    public void AddPunch_SameDateWithinIntervalWithoutForce_Fails()
     {
         var date = new DateOnly(2026, 2, 1);
         var offset = TimeZoneInfo.Local.GetUtcOffset(new DateTime(2026, 2, 1));
@@ -14,19 +14,23 @@ public class WorkDayAggregateTests
 
         day.AddPunch(new DateTimeOffset(2026, 2, 1, 9, 0, 0, offset), "start", TimeSpan.FromSeconds(30), force: false);
 
-        Assert.Throws<InvalidOperationException>(() =>
-            day.AddPunch(new DateTimeOffset(2026, 2, 1, 9, 0, 10, offset), "duplicate", TimeSpan.FromSeconds(30), force: false));
+        var result = day.AddPunch(new DateTimeOffset(2026, 2, 1, 9, 0, 10, offset), "duplicate", TimeSpan.FromSeconds(30), force: false);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("too_fast", result.Error!.Code);
     }
 
     [Fact]
-    public void AddPunch_DifferentDate_Throws()
+    public void AddPunch_DifferentDate_Fails()
     {
         var date = new DateOnly(2026, 2, 1);
         var offset = TimeZoneInfo.Local.GetUtcOffset(new DateTime(2026, 2, 2));
         var day = new WorkDay(date);
 
-        Assert.Throws<InvalidOperationException>(() =>
-            day.AddPunch(new DateTimeOffset(2026, 2, 2, 9, 0, 0, offset), "wrong day", TimeSpan.FromSeconds(30), force: false));
+        var result = day.AddPunch(new DateTimeOffset(2026, 2, 2, 9, 0, 0, offset), "wrong day", TimeSpan.FromSeconds(30), force: false);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("date_mismatch", result.Error!.Code);
     }
 
     [Fact]
