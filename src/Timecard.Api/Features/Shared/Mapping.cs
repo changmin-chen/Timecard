@@ -1,4 +1,4 @@
-using Timecard.Api.Data;
+using Timecard.Api.Data.Entities;
 using Timecard.Api.Domain;
 
 namespace Timecard.Api.Features.Shared;

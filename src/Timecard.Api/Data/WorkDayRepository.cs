@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Timecard.Api.Data.Entities;
 
 namespace Timecard.Api.Data;
 

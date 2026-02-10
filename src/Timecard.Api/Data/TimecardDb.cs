@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Timecard.Api.Data.Entities;
 
 namespace Timecard.Api.Data;
 

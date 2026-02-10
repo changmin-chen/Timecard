@@ -1,4 +1,5 @@
 using Timecard.Api.Data;
+using Timecard.Api.Data.Entities;
 using Timecard.Api.Features.Shared;
 
 namespace Timecard.Api.Features.Adjustments;

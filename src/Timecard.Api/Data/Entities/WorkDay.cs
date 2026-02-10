@@ -1,4 +1,4 @@
-namespace Timecard.Api.Data;
+﻿namespace Timecard.Api.Data.Entities;
 
 public sealed class WorkDay
 {
@@ -113,58 +113,5 @@ public sealed class WorkDay
         var punchDate = DateOnly.FromDateTime(at.LocalDateTime);
         if (punchDate != Date)
             throw new InvalidOperationException("Changing punch date is not supported in MVP.");
-    }
-}
-
-public sealed class PunchEvent
-{
-    private PunchEvent()
-    {
-    }
-
-    internal PunchEvent(DateTimeOffset at, string? note)
-    {
-        At = at;
-        Note = note?.Trim() ?? "";
-    }
-
-    public int Id { get; private set; }
-    public int WorkDayId { get; private set; }
-
-    public DateTimeOffset At { get; private set; }
-    public string Note { get; private set; } = "";
-
-    internal void Update(DateTimeOffset at, string? note)
-    {
-        At = at;
-        Note = note?.Trim() ?? "";
-    }
-}
-
-public sealed class Adjustment
-{
-    private Adjustment()
-    {
-    }
-
-    internal Adjustment(string kind, int minutes, string? note)
-    {
-        Kind = kind.Trim();
-        Minutes = minutes;
-        Note = note?.Trim() ?? "";
-    }
-
-    public int Id { get; private set; }
-    public int WorkDayId { get; private set; }
-
-    public string Kind { get; private set; } = "Manual";
-    public int Minutes { get; private set; }
-    public string Note { get; private set; } = "";
-
-    internal void Update(string kind, int minutes, string? note)
-    {
-        Kind = kind.Trim();
-        Minutes = minutes;
-        Note = note?.Trim() ?? "";
     }
 }
