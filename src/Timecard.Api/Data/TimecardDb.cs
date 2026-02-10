@@ -21,6 +21,12 @@ public sealed class TimecardDb(DbContextOptions<TimecardDb> options) : DbContext
             e.Property(x => x.Date).HasConversion(dateOnlyConverter);
             e.HasIndex(x => x.Date).IsUnique();
             e.Property(x => x.Note).HasMaxLength(4000);
+            e.Property(x => x.IsNonWorkingDay);
+
+            e.Metadata.FindNavigation(nameof(WorkDay.Punches))!
+                .SetPropertyAccessMode(PropertyAccessMode.Field);
+            e.Metadata.FindNavigation(nameof(WorkDay.Adjustments))!
+                .SetPropertyAccessMode(PropertyAccessMode.Field);
 
             e.HasMany(x => x.Punches)
                 .WithOne()
@@ -38,6 +44,8 @@ public sealed class TimecardDb(DbContextOptions<TimecardDb> options) : DbContext
             e.HasKey(x => x.Id);
             e.HasIndex(x => new { x.WorkDayId, x.At });
             e.Property(x => x.Note).HasMaxLength(4000);
+            e.Property(x => x.WorkDayId);
+            e.Property(x => x.At);
         });
 
         modelBuilder.Entity<Adjustment>(e =>
@@ -45,6 +53,8 @@ public sealed class TimecardDb(DbContextOptions<TimecardDb> options) : DbContext
             e.HasKey(x => x.Id);
             e.Property(x => x.Kind).HasMaxLength(64);
             e.Property(x => x.Note).HasMaxLength(4000);
+            e.Property(x => x.WorkDayId);
+            e.Property(x => x.Minutes);
             e.HasIndex(x => new { x.WorkDayId, x.Kind });
         });
     }

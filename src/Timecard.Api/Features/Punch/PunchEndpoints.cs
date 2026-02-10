@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Data;
 using Timecard.Api.Features.Shared;
 
@@ -6,6 +5,8 @@ namespace Timecard.Api.Features.Punch;
 
 public static class PunchEndpoints
 {
+    private static readonly TimeSpan MinInterval = TimeSpan.FromSeconds(30);
+
     public static IEndpointRouteBuilder MapPunchEndpoints(this IEndpointRouteBuilder app)
     {
         var g = app.MapGroup("/api/punch").WithTags("Punch");
@@ -21,76 +22,65 @@ public static class PunchEndpoints
     }
 
     public sealed record PunchCreate(DateTimeOffset? At, string? Note, bool Force);
-
     public sealed record PunchUpdate(DateTimeOffset At, string? Note);
 
-    // MVP 反手滑：同一天距離上一筆 < 30 秒就擋掉（除非 force=true）
-    private static readonly TimeSpan MinInterval = TimeSpan.FromSeconds(30);
-
-    private static async Task<IResult> AddPunch(TimecardDb db, WorkDayRepository repo, PunchCreate? req, CancellationToken ct)
+    private static async Task<IResult> AddPunch(WorkDayRepository repo, PunchCreate? req, CancellationToken ct)
     {
         var now = req?.At ?? DateTimeOffset.Now;
         var date = DateOnly.FromDateTime(now.LocalDateTime);
-
         var day = await repo.GetOrCreateDay(date, ct);
 
-        var lastAt = (await db.Punches
-                .Where(p => p.WorkDayId == day.Id)
-                .ToListAsync(ct))  //  in-memory ordering
-            .OrderByDescending(p => p.At)
-            .Select(p => (DateTimeOffset?)p.At)
-            .FirstOrDefault();
-
-        if (lastAt is not null && (now - lastAt.Value) < MinInterval && (req?.Force != true))
+        try
         {
-            return Results.BadRequest(new { error = $"Too fast. Last punch was {(int)(now - lastAt.Value).TotalSeconds}s ago. Use force=true to override." });
+            day.AddPunch(now, req?.Note, MinInterval, req?.Force == true);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
         }
 
-        db.Punches.Add(new PunchEvent
+        await repo.SaveChangesAsync(ct);
+        return Results.Ok(Mapping.ToDayDto(day));
+    }
+
+    private static async Task<IResult> UpdatePunch(WorkDayRepository repo, int id, PunchUpdate req, CancellationToken ct)
+    {
+        var day = await repo.LoadByPunchId(id, ct);
+        if (day is null) return Results.NotFound();
+
+        try
         {
-            WorkDayId = day.Id,
-            At = now,
-            Note = req?.Note?.Trim() ?? ""
-        });
+            day.UpdatePunch(id, req.At, req.Note);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
+        }
+        catch (KeyNotFoundException)
+        {
+            return Results.NotFound();
+        }
 
-        await db.SaveChangesAsync(ct);
-
-        var full = await repo.LoadDay(date, ct);
-        return Results.Ok(Mapping.ToDayDto(date, full));
+        await repo.SaveChangesAsync(ct);
+        return Results.Ok(Mapping.ToDayDto(day));
     }
 
-    private static async Task<IResult> UpdatePunch(TimecardDb db, WorkDayRepository repo, int id, PunchUpdate req, CancellationToken ct)
+    private static async Task<IResult> DeletePunch(WorkDayRepository repo, int id, CancellationToken ct)
     {
-        var p = await db.Punches.FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (p is null) return Results.NotFound();
+        var day = await repo.LoadByPunchId(id, ct);
+        if (day is null) return Results.NotFound();
 
-        var newDate = DateOnly.FromDateTime(req.At.LocalDateTime);
-        var oldDate = await db.WorkDays.Where(d => d.Id == p.WorkDayId).Select(d => d.Date).FirstAsync(ct);
+        try
+        {
+            day.RemovePunch(id);
+        }
+        catch (KeyNotFoundException)
+        {
+            return Results.NotFound();
+        }
 
-        if (newDate != oldDate)
-            return Results.BadRequest(new { error = "Changing punch date is not supported in MVP." });
-
-        p.At = req.At;
-        p.Note = req.Note?.Trim() ?? "";
-
-        await db.SaveChangesAsync(ct);
-
-        var full = await repo.LoadDay(oldDate, ct);
-        return Results.Ok(Mapping.ToDayDto(oldDate, full));
-    }
-
-    private static async Task<IResult> DeletePunch(TimecardDb db, WorkDayRepository repo, int id, CancellationToken ct)
-    {
-        var p = await db.Punches.FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (p is null) return Results.NotFound();
-
-        var dayDate = await db.WorkDays.Where(d => d.Id == p.WorkDayId).Select(d => d.Date).FirstAsync(ct);
-
-        db.Punches.Remove(p);
-        await db.SaveChangesAsync(ct);
-
-        var full = await repo.LoadDay(dayDate, ct);
-        return Results.Ok(Mapping.ToDayDto(dayDate, full));
+        await repo.SaveChangesAsync(ct);
+        return Results.Ok(Mapping.ToDayDto(day));
     }
 
     private static async Task<IResult> GetStatus(WorkDayRepository repo, string? date, CancellationToken ct)
@@ -99,7 +89,7 @@ public static class PunchEndpoints
         var day = await repo.LoadDay(d, ct);
 
         var punches = day?.Punches.OrderBy(p => p.At).ToList() ?? [];
-        var (start, end, worked) = Mapping.DeriveSpan(punches);
+        var (start, end, worked) = day?.DeriveSpan() ?? (null, null, 0);
 
         return Results.Ok(new
         {

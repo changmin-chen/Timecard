@@ -34,18 +34,15 @@ public static class DayEndpoints
         return Results.Ok(Mapping.ToDayDto(d, day));
     }
 
-    private static async Task<IResult> SetNonWorking(TimecardDb db, WorkDayRepository repo, string date, NonWorkingRequest req, CancellationToken ct)
+    private static async Task<IResult> SetNonWorking(WorkDayRepository repo, string date, NonWorkingRequest req, CancellationToken ct)
     {
         if (!DateOnly.TryParse(date, out var d))
             return Results.BadRequest(new { error = "Invalid date. Use yyyy-MM-dd." });
 
         var day = await repo.GetOrCreateDay(d, ct);
-        day.IsNonWorkingDay = req.IsNonWorkingDay;
-        day.Note = req.Note ?? day.Note;
+        day.SetNonWorking(req.IsNonWorkingDay, req.Note);
 
-        await db.SaveChangesAsync(ct);
-
-        var full = await repo.LoadDay(d, ct);
-        return Results.Ok(Mapping.ToDayDto(d, full));
+        await repo.SaveChangesAsync(ct);
+        return Results.Ok(Mapping.ToDayDto(day));
     }
 }

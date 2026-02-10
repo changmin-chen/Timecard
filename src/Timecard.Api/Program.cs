@@ -16,7 +16,7 @@ builder.Services.ConfigureHttpJsonOptions(o =>
 
 builder.Services.AddDbContext<TimecardDb>(opt =>
 {
-    var cs = builder.Configuration.GetConnectionString("Timecard") ?? "Data Source=App_Data/timecard_punch.db";
+    var cs = builder.Configuration.GetConnectionString("Timecard") ?? "Data Source=App_Data/timecard.db";
     opt.UseSqlite(cs);
 });
 

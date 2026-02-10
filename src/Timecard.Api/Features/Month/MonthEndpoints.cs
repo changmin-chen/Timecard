@@ -22,65 +22,69 @@ public static class MonthEndpoints
         var start = new DateOnly(year, month, 1);
         var endExclusive = start.AddMonths(1);
 
-        var query = db.WorkDays
+        var projected = await db.WorkDays
             .Where(d => d.Date >= start && d.Date < endExclusive)
-            .Include(d => d.Punches)
-            .Include(d => d.Adjustments);
+            .Select(d => new MonthDayProjection(
+                d.Date,
+                d.IsNonWorkingDay,
+                d.Note,
+                d.Punches.Count,
+                d.Punches.Min(p => (DateTimeOffset?)p.At),
+                d.Punches.Max(p => (DateTimeOffset?)p.At),
+                d.Adjustments.Sum(a => (int?)a.Minutes) ?? 0
+            ))
+            .ToListAsync(ct);
 
-        var existingDays = await query.ToListAsync(ct);
-
-        List<(DateOnly date, WorkDay? day)> days;
+        List<MonthDayProjection> days;
         if (!includeEmpty)
         {
-            days = existingDays
-                .Select(d => (d.Date, (WorkDay?)d))
-                .OrderBy(x => x.Date)
-                .ToList();
+            days = projected.OrderBy(x => x.Date).ToList();
         }
         else
         {
-            var map = existingDays.ToDictionary(d => d.Date, d => (WorkDay?)d);
-            days = new List<(DateOnly, WorkDay?)>();
+            var map = projected.ToDictionary(x => x.Date);
+            days = [];
             for (var d = start; d < endExclusive; d = d.AddDays(1))
             {
-                map.TryGetValue(d, out var wd);
-                days.Add((d, wd));
+                if (map.TryGetValue(d, out var existing))
+                {
+                    days.Add(existing);
+                    continue;
+                }
+
+                days.Add(new MonthDayProjection(d, false, "", 0, null, null, 0));
             }
         }
 
-        var computedForMonth = days.Select(x =>
+        var computedForMonth = days.Select(d =>
         {
-            var dayDto = Mapping.ToDayDto(x.date, x.day);
-            var dayComputed = WorkRules.ComputeDay(dayDto.PlannedMinutes, dayDto.WorkedMinutes, dayDto.CreditedMinutes);
-            return new DayWithComputed(x.date, dayComputed);
+            var planned = d.IsNonWorkingDay ? 0 : WorkRules.PlannedMinutesPerWorkDay;
+            var worked = DeriveWorkedMinutes(d.Start, d.End, d.PunchCount);
+            var computed = WorkRules.ComputeDay(planned, worked, d.CreditedMinutes);
+            return new DayWithComputed(d.Date, computed);
         });
 
         var monthComputed = WorkRules.ComputeMonth(computedForMonth);
+        var dayMap = days.ToDictionary(d => d.Date);
+        var existingDates = projected.Select(x => x.Date).ToHashSet();
 
         var dtoDays = monthComputed.Days.Select(d =>
         {
-            var day = days.First(x => x.date == d.Date).day;
-            var exists = day is not null;
-            var isNonWorking = day?.IsNonWorkingDay ?? false;
-            var note = day?.Note ?? "";
-
-            var punchCount = day?.Punches.Count ?? 0;
+            var src = dayMap[d.Date];
+            var exists = existingDates.Contains(d.Date);
 
             return new MonthDayDto(
                 Date: d.Date.ToString("yyyy-MM-dd"),
                 Exists: exists,
-                IsNonWorkingDay: isNonWorking,
-                Note: note,
-
-                PunchCount: punchCount,
-
+                IsNonWorkingDay: src.IsNonWorkingDay,
+                Note: src.Note,
+                PunchCount: src.PunchCount,
                 PlannedMinutes: d.Day.PlannedMinutes,
                 WorkedMinutes: d.Day.WorkedMinutes,
                 CreditedMinutes: d.Day.CreditedMinutes,
                 EffectiveMinutes: d.Day.EffectiveMinutes,
                 DeltaMinutes: d.Day.DeltaMinutes,
                 FlexCandidate: d.Day.FlexCandidate,
-
                 FlexApplied: d.FlexApplied,
                 FlexBankEnd: d.FlexBankEnd,
                 DeficitMinutes: d.DeficitMinutes
@@ -88,6 +92,21 @@ public static class MonthEndpoints
         }).ToList();
 
         return Results.Ok(new MonthDto(Year: year, Month: month, FlexBankEnd: monthComputed.FlexBankEnd, Days: dtoDays));
-
     }
+
+    private static int DeriveWorkedMinutes(DateTimeOffset? start, DateTimeOffset? end, int punchCount)
+    {
+        if (punchCount < 2 || start is null || end is null) return 0;
+        return (int)Math.Max(0, (end.Value - start.Value).TotalMinutes);
+    }
+
+    private sealed record MonthDayProjection(
+        DateOnly Date,
+        bool IsNonWorkingDay,
+        string Note,
+        int PunchCount,
+        DateTimeOffset? Start,
+        DateTimeOffset? End,
+        int CreditedMinutes
+    );
 }

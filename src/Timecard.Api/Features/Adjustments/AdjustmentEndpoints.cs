@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Data;
 using Timecard.Api.Features.Shared;
 
@@ -20,60 +19,63 @@ public static class AdjustmentEndpoints
     public sealed record AdjustmentCreate(string Date, string Kind, int Minutes, string? Note);
     public sealed record AdjustmentUpdate(string Kind, int Minutes, string? Note);
 
-    private static async Task<IResult> Create(TimecardDb db, WorkDayRepository repo, AdjustmentCreate req, CancellationToken ct)
+    private static async Task<IResult> Create(WorkDayRepository repo, AdjustmentCreate req, CancellationToken ct)
     {
         if (!DateOnly.TryParse(req.Date, out var d))
             return Results.BadRequest(new { error = "Invalid date. Use yyyy-MM-dd." });
 
-        if (string.IsNullOrWhiteSpace(req.Kind))
-            return Results.BadRequest(new { error = "kind is required." });
-
         var day = await repo.GetOrCreateDay(d, ct);
 
-        db.Adjustments.Add(new Adjustment
+        try
         {
-            WorkDayId = day.Id,
-            Kind = req.Kind.Trim(),
-            Minutes = req.Minutes,
-            Note = req.Note?.Trim() ?? ""
-        });
+            day.AddAdjustment(req.Kind, req.Minutes, req.Note);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
+        }
 
-        await db.SaveChangesAsync(ct);
-
-        var full = await repo.LoadDay(d, ct);
-        return Results.Ok(Mapping.ToDayDto(d, full));
+        await repo.SaveChangesAsync(ct);
+        return Results.Ok(Mapping.ToDayDto(day));
     }
 
-    private static async Task<IResult> Update(TimecardDb db, WorkDayRepository repo, int id, AdjustmentUpdate req, CancellationToken ct)
+    private static async Task<IResult> Update(WorkDayRepository repo, int id, AdjustmentUpdate req, CancellationToken ct)
     {
-        var a = await db.Adjustments.FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (a is null) return Results.NotFound();
+        var day = await repo.LoadByAdjustmentId(id, ct);
+        if (day is null) return Results.NotFound();
 
-        if (string.IsNullOrWhiteSpace(req.Kind))
-            return Results.BadRequest(new { error = "kind is required." });
+        try
+        {
+            day.UpdateAdjustment(id, req.Kind, req.Minutes, req.Note);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
+        }
+        catch (KeyNotFoundException)
+        {
+            return Results.NotFound();
+        }
 
-        a.Kind = req.Kind.Trim();
-        a.Minutes = req.Minutes;
-        a.Note = req.Note?.Trim() ?? "";
-
-        await db.SaveChangesAsync(ct);
-
-        var dayDate = await db.WorkDays.Where(d => d.Id == a.WorkDayId).Select(d => d.Date).FirstAsync(ct);
-        var full = await repo.LoadDay(dayDate, ct);
-        return Results.Ok(Mapping.ToDayDto(dayDate, full));
+        await repo.SaveChangesAsync(ct);
+        return Results.Ok(Mapping.ToDayDto(day));
     }
 
-    private static async Task<IResult> Delete(TimecardDb db, WorkDayRepository repo, int id, CancellationToken ct)
+    private static async Task<IResult> Delete(WorkDayRepository repo, int id, CancellationToken ct)
     {
-        var a = await db.Adjustments.FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (a is null) return Results.NotFound();
+        var day = await repo.LoadByAdjustmentId(id, ct);
+        if (day is null) return Results.NotFound();
 
-        var dayDate = await db.WorkDays.Where(d => d.Id == a.WorkDayId).Select(d => d.Date).FirstAsync(ct);
+        try
+        {
+            day.RemoveAdjustment(id);
+        }
+        catch (KeyNotFoundException)
+        {
+            return Results.NotFound();
+        }
 
-        db.Adjustments.Remove(a);
-        await db.SaveChangesAsync(ct);
-
-        var full = await repo.LoadDay(dayDate, ct);
-        return Results.Ok(Mapping.ToDayDto(dayDate, full));
+        await repo.SaveChangesAsync(ct);
+        return Results.Ok(Mapping.ToDayDto(day));
     }
 }

@@ -17,11 +17,6 @@ function mins(m) {
 function showError(message) {
     // // For now using alert, but can be replaced with toast notifications
     alert(message);
-    // const toast = document.createElement("div");
-    // toast.className = "toast error";
-    // toast.textContent = message;
-    // document.body.appendChild(toast);
-    // setTimeout(() => toast.remove(), 3000);
 }
 
 function withErrorHandling(asyncFn) {
