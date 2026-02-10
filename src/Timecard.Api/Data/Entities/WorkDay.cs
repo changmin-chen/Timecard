@@ -32,11 +32,11 @@ public sealed class WorkDay
     public DomainResult<PunchEvent> AddPunch(DateTimeOffset at, string? note, TimeSpan minInterval, bool force)
     {
         var dateCheck = ValidatePunchDate(at);
-        if (!dateCheck.IsSuccess) return DomainResult<PunchEvent>.Fail(dateCheck.Error!.Code, dateCheck.Error!.Message);
+        if (!dateCheck.IsSuccess) return dateCheck.Error!.Message;
 
         var last = _punches.OrderByDescending(p => p.At).FirstOrDefault();
         if (!force && last is not null && (at - last.At) < minInterval)
-            return DomainResult<PunchEvent>.Fail("too_fast", "Too fast. Please wait before creating another punch.");
+            return "Too fast. Please wait before creating another punch.";
 
         var punch = new PunchEvent(at, note);
         _punches.Add(punch);
@@ -47,7 +47,7 @@ public sealed class WorkDay
     {
         var punch = _punches.FirstOrDefault(p => p.Id == punchId);
         if (punch is null)
-            return DomainResult.Fail("not_found", "Punch not found.");
+            return "Punch not found.";
 
         _punches.Remove(punch);
         return DomainResult.Ok();
@@ -56,7 +56,7 @@ public sealed class WorkDay
     public DomainResult<Adjustment> AddAdjustment(string kind, int minutes, string? note)
     {
         if (string.IsNullOrWhiteSpace(kind))
-            return DomainResult<Adjustment>.Fail("kind_required", "kind is required.");
+            return "kind is required.";
 
         var adjustment = new Adjustment(kind, minutes, note);
         _adjustments.Add(adjustment);
@@ -66,11 +66,11 @@ public sealed class WorkDay
     public DomainResult UpdateAdjustment(int adjustmentId, string kind, int minutes, string? note)
     {
         if (string.IsNullOrWhiteSpace(kind))
-            return DomainResult.Fail("kind_required", "kind is required.");
+            return "kind is required.";
 
         var adjustment = _adjustments.FirstOrDefault(a => a.Id == adjustmentId);
         if (adjustment is null)
-            return DomainResult.Fail("not_found", "Adjustment not found.");
+            return "Adjustment not found.";
 
         adjustment.Update(kind, minutes, note);
         return DomainResult.Ok();
@@ -80,7 +80,7 @@ public sealed class WorkDay
     {
         var adjustment = _adjustments.FirstOrDefault(a => a.Id == adjustmentId);
         if (adjustment is null)
-            return DomainResult.Fail("not_found", "Adjustment not found.");
+            return "Adjustment not found.";
 
         _adjustments.Remove(adjustment);
         return DomainResult.Ok();
@@ -105,7 +105,7 @@ public sealed class WorkDay
     {
         var punchDate = DateOnly.FromDateTime(at.LocalDateTime);
         if (punchDate != Date)
-            return DomainResult.Fail("date_mismatch", "Changing punch date is not supported in MVP.");
+            return "Changing punch date is not supported in MVP.";
 
         return DomainResult.Ok();
     }

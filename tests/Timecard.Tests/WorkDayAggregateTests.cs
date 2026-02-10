@@ -17,7 +17,7 @@ public class WorkDayAggregateTests
         var result = day.AddPunch(new DateTimeOffset(2026, 2, 1, 9, 0, 10, offset), "duplicate", TimeSpan.FromSeconds(30), force: false);
 
         Assert.False(result.IsSuccess);
-        Assert.Equal("too_fast", result.Error!.Code);
+        Assert.Equal("Too fast. Please wait before creating another punch.", result.Error!.Message);
     }
 
     [Fact]
@@ -30,7 +30,7 @@ public class WorkDayAggregateTests
         var result = day.AddPunch(new DateTimeOffset(2026, 2, 2, 9, 0, 0, offset), "wrong day", TimeSpan.FromSeconds(30), force: false);
 
         Assert.False(result.IsSuccess);
-        Assert.Equal("date_mismatch", result.Error!.Code);
+        Assert.Equal("Changing punch date is not supported in MVP.", result.Error!.Message);
     }
 
     [Fact]
