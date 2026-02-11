@@ -17,7 +17,7 @@ builder.Services.ConfigureHttpJsonOptions(o =>
 builder.Services.AddDbContext<TimecardDb>(opt =>
 {
     var cs = builder.Configuration.GetConnectionString("Timecard")
-             ?? "Host=localhost;Port=5432;Database=timecard;Username=postgres;Password=postgres";
+             ?? throw new InvalidOperationException("ConnectionStrings:Timecard is missing.");
     opt.UseNpgsql(cs);
 });
 
@@ -25,10 +25,11 @@ builder.Services.AddScoped<WorkDayRepository>();
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
+if (app.Environment.IsDevelopment())
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<TimecardDb>();
-    db.Database.EnsureCreated();
+    db.Database.Migrate();
 }
 
 app.UseDefaultFiles();
