@@ -1,7 +1,7 @@
 // timecardApi.js (endpoint wrapper)
 import { createApiClient } from "./api.js";
 
-const client = createApiClient({ baseUrl: "" }); // 同源，之後要換 server 再改
+const client = createApiClient({ baseUrl: "" });
 
 export const timecardApi = {
     getToday: () => client.request("/api/day/today"),

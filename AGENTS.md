@@ -2,23 +2,27 @@
 
 ## Project Structure & Module Organization
 - `src/Timecard.Api/`: ASP.NET Core minimal API (`Program.cs`), domain rules (`Domain/`), data access and EF Core context (`Data/`), and endpoint groups (`Features/Adjustments`, `Features/Days`, `Features/Month`, `Features/Punch`).
-- `src/Timecard.Api/wwwroot/`: static frontend files (`index.html`, `app.js`, `api.js`, `styles.css`).
+- `client/`: Vue 3 + Vite frontend project (SFC components, composables, API client layer). `npm run build` outputs to `src/Timecard.Api/wwwroot/`.
+- `src/Timecard.Api/wwwroot/`: Vite build output (gitignored, not hand-edited).
 - `tests/Timecard.Tests/`: xUnit tests for domain/business behavior (for example `WorkRulesTests.cs`).
 - `Timecard.slnx`: solution entry point for loading/building the full repo.
 
 ## Build, Test, and Development Commands
 - `dotnet restore Timecard.slnx`: restore NuGet dependencies.
 - `dotnet build Timecard.slnx`: compile API and tests.
-- `dotnet run --project src/Timecard.Api/Timecard.Api.csproj`: run locally (default `http://localhost:5077`).
+- `dotnet run --project src/Timecard.Api/Timecard.Api.csproj`: run locally (default `https://localhost:49177`).
 - `dotnet test tests/Timecard.Tests/Timecard.Tests.csproj`: run unit tests.
 - Optional EF workflow when schema evolves: `dotnet ef migrations add <Name> --project src/Timecard.Api` then `dotnet ef database update`.
+- `cd client && npm install`: install frontend dependencies.
+- `cd client && npm run dev`: Vite dev server (`http://localhost:5173`), proxies `/api` → `:49177`.
+- `cd client && npm run build`: production build to `src/Timecard.Api/wwwroot/`.
 
 ## Coding Style & Naming Conventions
 - C# uses nullable reference types and implicit usings (enabled in project files).
 - Use 4-space indentation and keep files UTF-8.
 - Public types/members: `PascalCase`; local variables/parameters: `camelCase`; async methods: `*Async`.
 - Keep endpoint mapping organized by feature folder and extension methods (for example `MapPunchEndpoints`).
-- Frontend JS/CSS in `wwwroot/` should stay framework-free and modular (`api.js`, feature-specific logic, shared styles).
+- Frontend uses Vue 3 SFC (`.vue`) components in `client/src/`. State management via composables (`ref`/`reactive`), no Pinia. API layer (`api.js`, `timecardApi.js`) is framework-agnostic.
 
 ## Encoding Rules (Critical)
 - All text files must be UTF-8. Prefer UTF-8 without BOM when writing via scripts.
