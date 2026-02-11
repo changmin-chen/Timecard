@@ -1,25 +1,25 @@
 // timecardApi.js (endpoint wrapper)
 import { createApiClient } from "./api.js";
 
-const client = createApiClient({ baseUrl: "" }); // 同源，之後要換 server 再改
+const client = createApiClient({ baseUrl: "" });
 
 export const timecardApi = {
     getToday: () => client.request("/api/day/today"),
-    clockIn: () => client.request("/api/clock/in", { method: "POST" }),
-    clockOut: () => client.request("/api/clock/out", { method: "POST" }),
 
-    deleteSession: (id) =>
-        client.request(`/api/sessions/${id}`, { method: "DELETE" }),
+    punch: () => client.request("/api/punch", { method: "POST" }),
 
-    addAdjustment: (payload) =>
-        client.request("/api/adjustments", {
+    deletePunch: (id) =>
+        client.request(`/api/punches/${id}`, { method: "DELETE" }),
+
+    addAttendanceRequest: (payload) =>
+        client.request("/api/attendance-requests", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
         }),
 
-    deleteAdjustment: (id) =>
-        client.request(`/api/adjustments/${id}`, { method: "DELETE" }),
+    deleteAttendanceRequest: (id) =>
+        client.request(`/api/attendance-requests/${id}`, { method: "DELETE" }),
 
     setNonWorking: (date, payload) =>
         client.request(`/api/day/${date}/nonworking`, {

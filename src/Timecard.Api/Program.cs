@@ -1,10 +1,10 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Data;
-using Timecard.Api.Features.Adjustments;
-using Timecard.Api.Features.Clock;
+using Timecard.Api.Features.AttendanceRequests;
 using Timecard.Api.Features.Days;
 using Timecard.Api.Features.Month;
+using Timecard.Api.Features.Punch;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,27 +16,28 @@ builder.Services.ConfigureHttpJsonOptions(o =>
 
 builder.Services.AddDbContext<TimecardDb>(opt =>
 {
-    var cs = builder.Configuration.GetConnectionString("Timecard") ?? "Data Source=App_Data/timecard.db";
-    opt.UseSqlite(cs);
+    var cs = builder.Configuration.GetConnectionString("Timecard")
+             ?? throw new InvalidOperationException("ConnectionStrings:Timecard is missing.");
+    opt.UseNpgsql(cs);
 });
+
+builder.Services.AddScoped<WorkDayRepository>();
 
 var app = builder.Build();
 
-// 讓你開箱即用：不需要先跑 migration（MVP 取捨）
-// 如果你想正統：改成 db.Database.Migrate();
-Directory.CreateDirectory(Path.Combine(app.Environment.ContentRootPath, "App_Data"));
-using (var scope = app.Services.CreateScope())
+if (app.Environment.IsDevelopment())
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<TimecardDb>();
-    db.Database.EnsureCreated();
+    db.Database.Migrate();
 }
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-app.MapClockEndpoints();
+app.MapPunchEndpoints();
 app.MapDayEndpoints();
-app.MapAdjustmentEndpoints();
+app.MapAttendanceRequestEndpoints();
 app.MapMonthEndpoints();
 
 app.Run();

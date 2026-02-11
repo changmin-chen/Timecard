@@ -1,4 +1,4 @@
-# Timecard MVP (.NET + SQLite + EF Core + Vanilla JS)
+# Timecard MVP (.NET + PostgreSQL + EF Core + Vanilla JS)
 
 這是一個「個人用」的工時管理系統 MVP：
 - 記錄上下班（支援多段 session）
@@ -22,7 +22,7 @@ dotnet run
 - http://localhost:5077/ （實際埠號以 console 顯示為準）
 
 資料庫：
-- `src/Timecard.Api/App_Data/timecard.db`
+- PostgreSQL via `ConnectionStrings:Timecard` in `src/Timecard.Api/appsettings.json`
 
 ## （可選）使用 migrations（比較正統）
 MVP 為了「拿到就能跑」使用 `EnsureCreated()`。

@@ -10,9 +10,7 @@ public static class MonthEndpoints
     public static IEndpointRouteBuilder MapMonthEndpoints(this IEndpointRouteBuilder app)
     {
         var g = app.MapGroup("/api/month").WithTags("Month");
-
         g.MapGet("/{year:int}/{month:int}", GetMonth);
-
         return app;
     }
 
@@ -24,69 +22,63 @@ public static class MonthEndpoints
         var start = new DateOnly(year, month, 1);
         var endExclusive = start.AddMonths(1);
 
-        // 只抓有資料的日子（預設），避免你沒打卡的週末被算成「欠工時」
-        var query = db.WorkDays
+        var workDays = await db.WorkDays
             .Where(d => d.Date >= start && d.Date < endExclusive)
-            .Include(d => d.Sessions)
-            .Include(d => d.Adjustments);
+            .Include(d => d.Punches)
+            .Include(d => d.AttendanceRequests)
+            .ToListAsync(ct);
 
-        var existingDays = await query.ToListAsync(ct);
+        var workDayMap = workDays.ToDictionary(d => d.Date);
+        var existingDates = workDays.Select(d => d.Date).ToHashSet();
 
-        List<(DateOnly date, WorkDay? day)> days;
+        List<DateOnly> allDates;
         if (!includeEmpty)
         {
-            days = existingDays
-                .Select(d => (d.Date, (WorkDay?)d))
-                .OrderBy(x => x.Date)
-                .ToList();
+            allDates = workDays.Select(d => d.Date).OrderBy(d => d).ToList();
         }
         else
         {
-            var map = existingDays.ToDictionary(d => d.Date, d => (WorkDay?)d);
-            days = new List<(DateOnly, WorkDay?)>();
+            allDates = [];
             for (var d = start; d < endExclusive; d = d.AddDays(1))
-            {
-                map.TryGetValue(d, out var wd);
-                days.Add((d, wd));
-            }
+                allDates.Add(d);
         }
 
-        var computedForMonth = days.Select(x =>
+        var computedForMonth = allDates.Select(date =>
         {
-            var dayDto = Mapping.ToDayDto(x.date, x.day);
-            var dayComputed = WorkRules.ComputeDay(dayDto.plannedMinutes, dayDto.workedMinutes, dayDto.creditedMinutes);
-            return new DayWithComputed(x.date, dayComputed);
+            workDayMap.TryGetValue(date, out var day);
+            var isNonWorking = day?.IsNonWorkingDay ?? false;
+            var planned = isNonWorking ? 0 : WorkRules.PlannedMinutesPerWorkDay;
+            var (_, _, worked) = day?.DeriveSpan() ?? (null, null, 0);
+            var extension = day?.CalculateExtensionMinutes() ?? 0;
+            var computed = WorkRules.ComputeDay(planned, worked, extension);
+            return new DayWithComputed(date, computed);
         });
 
         var monthComputed = WorkRules.ComputeMonth(computedForMonth);
 
         var dtoDays = monthComputed.Days.Select(d =>
         {
-            // 重新抓 day 的 meta（nonworking/note/exists）
-            var day = days.First(x => x.date == d.Date).day;
-            var exists = day is not null;
-            var isNonWorking = day?.IsNonWorkingDay ?? false;
-            var note = day?.Note ?? "";
+            var exists = existingDates.Contains(d.Date);
+            workDayMap.TryGetValue(d.Date, out var src);
 
             return new MonthDayDto(
-                date: d.Date.ToString("yyyy-MM-dd"),
-                exists: exists,
-                isNonWorkingDay: isNonWorking,
-                note: note,
-
-                plannedMinutes: d.Day.PlannedMinutes,
-                workedMinutes: d.Day.WorkedMinutes,
-                creditedMinutes: d.Day.CreditedMinutes,
-                effectiveMinutes: d.Day.EffectiveMinutes,
-                deltaMinutes: d.Day.DeltaMinutes,
-                flexCandidate: d.Day.FlexCandidate,
-
-                flexApplied: d.FlexApplied,
-                flexBankEnd: d.FlexBankEnd,
-                deficitMinutes: d.DeficitMinutes
+                Date: d.Date.ToString("yyyy-MM-dd"),
+                Exists: exists,
+                IsNonWorkingDay: src?.IsNonWorkingDay ?? false,
+                Note: src?.Note ?? "",
+                PunchCount: src?.Punches.Count ?? 0,
+                PlannedMinutes: d.Day.PlannedMinutes,
+                WorkedMinutes: d.Day.WorkedMinutes,
+                ExtensionMinutes: d.Day.CreditedMinutes,
+                EffectiveMinutes: d.Day.EffectiveMinutes,
+                DeltaMinutes: d.Day.DeltaMinutes,
+                FlexCandidate: d.Day.FlexCandidate,
+                FlexApplied: d.FlexApplied,
+                FlexBankEnd: d.FlexBankEnd,
+                DeficitMinutes: d.DeficitMinutes
             );
         }).ToList();
 
-        return Results.Ok(new MonthDto(year, month, monthComputed.FlexBankEnd, dtoDays));
+        return Results.Ok(new MonthDto(Year: year, Month: month, FlexBankEnd: monthComputed.FlexBankEnd, Days: dtoDays));
     }
 }
