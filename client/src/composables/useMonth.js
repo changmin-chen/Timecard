@@ -1,22 +1,22 @@
 import { ref } from 'vue'
 import { timecardApi } from '../timecardApi.js'
+import { useToast } from './useToast.js'
 
 export function useMonth() {
   const month = ref(null)
-  const error = ref('')
   const loading = ref(false)
+  const toast = useToast()
 
   async function loadMonth(year, m, includeEmpty) {
-    error.value = ''
     loading.value = true
     try {
       month.value = await timecardApi.getMonth(year, m, includeEmpty)
     } catch (err) {
-      error.value = err.message
+      toast.error(err.message)
     } finally {
       loading.value = false
     }
   }
 
-  return { month, error, loading, loadMonth }
+  return { month, loading, loadMonth }
 }
