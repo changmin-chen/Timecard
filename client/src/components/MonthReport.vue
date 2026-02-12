@@ -17,13 +17,15 @@ onMounted(() => {
 })
 
 function load() {
-  if (!monthPick.value) return
-  const [y, m] = monthPick.value.split('-').map(Number)
+  const match = /^(\d{4})-(\d{2})$/.exec(monthPick.value)
+  if (!match) return
+  const y = Number(match[1])
+  const m = Number(match[2])
   loadMonth(y, m, includeEmpty.value)
 }
 
 function monthSummary(m) {
-  return `month=${m.year}-${String(m.month).padStart(2, '0')} flexBankEnd=${m.flexBankEnd} days=${m.days.length}`
+  return `${m.year} 年 ${m.month} 月 ｜ 彈性餘額：${mins(m.flexBankEnd)} ｜ 共 ${m.days.length} 天`
 }
 
 function deltaCls(d) {
@@ -41,20 +43,23 @@ function deficitCls(d) {
     <div class="row">
       <div>
         <h2>月報表</h2>
-        <div class="hint">預設不含空白日，避免週末被當成欠工時。勾 includeEmpty 才會列出整個月。</div>
+        <div class="hint">預設不含空白日，避免週末被當成欠工時。勾選「顯示所有日期」才會列出整個月。</div>
       </div>
       <div class="actions">
         <input type="month" v-model="monthPick" />
         <label class="inline small">
           <input type="checkbox" v-model="includeEmpty" />
-          includeEmpty
+          顯示所有日期
         </label>
         <button class="ghost" @click="load" :disabled="loading">載入</button>
       </div>
     </div>
 
-    <div v-if="month" class="mono small">{{ monthSummary(month) }}</div>
-    <div v-if="month" class="tableWrap">
+    <div v-if="month" class="hint" style="margin-top: 12px; font-size: 15px; font-weight: 600; color: var(--text);">
+      {{ monthSummary(month) }}
+    </div>
+    <div v-if="month && !month.days.length" class="hint">這個月份目前沒有資料。</div>
+    <div v-if="month && month.days.length" class="tableWrap">
       <table>
         <thead>
           <tr>

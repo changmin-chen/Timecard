@@ -1,10 +1,18 @@
 <script setup>
-import { reactive, watch } from 'vue'
+import { reactive, watch, ref } from 'vue'
 
 const props = defineProps({
   date: { type: String, default: '' },
 })
 const emit = defineEmits(['submit'])
+
+const categories = [
+  { value: 'Leave', label: '請假 (Leave)' },
+  { value: 'Trip', label: '出差 (Trip)' },
+  { value: 'Holiday', label: '假日 (Holiday)' },
+  { value: 'Typhoon', label: '颱風假 (Typhoon)' },
+  { value: 'Other', label: '其他 (Other)' },
+]
 
 const form = reactive({
   date: '',
@@ -13,15 +21,17 @@ const form = reactive({
   end: '',
   note: '',
 })
+const customCategory = ref('')
 
 watch(() => props.date, (val) => {
   form.date = val
 }, { immediate: true })
 
 function onSubmit() {
+  const cat = form.category === 'Other' ? customCategory.value.trim() : form.category
   emit('submit', {
     date: form.date,
-    category: form.category.trim(),
+    category: cat,
     start: form.start,
     end: form.end,
     note: form.note.trim(),
@@ -29,6 +39,7 @@ function onSubmit() {
   form.start = ''
   form.end = ''
   form.note = ''
+  customCategory.value = ''
 }
 </script>
 
@@ -41,7 +52,15 @@ function onSubmit() {
     </label>
     <label>
       類別
-      <input type="text" v-model="form.category" placeholder="Leave / Trip / Holiday / Typhoon" required />
+      <select v-model="form.category">
+        <option v-for="c in categories" :key="c.value" :value="c.value">
+          {{ c.label }}
+        </option>
+      </select>
+    </label>
+    <label v-if="form.category === 'Other'">
+      自訂類別
+      <input type="text" v-model="customCategory" placeholder="輸入自訂類別" required />
     </label>
     <label>
       起始時間
