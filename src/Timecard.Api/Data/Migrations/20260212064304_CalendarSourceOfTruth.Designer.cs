@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Timecard.Api.Data;
@@ -11,9 +12,11 @@ using Timecard.Api.Data;
 namespace Timecard.Api.Data.Migrations
 {
     [DbContext(typeof(TimecardDb))]
-    partial class TimecardDbModelSnapshot : ModelSnapshot
+    [Migration("20260212064304_CalendarSourceOfTruth")]
+    partial class CalendarSourceOfTruth
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

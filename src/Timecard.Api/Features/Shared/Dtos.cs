@@ -8,6 +8,8 @@ public sealed record DayDto(
     bool Exists,
     bool IsNonWorkingDay,
     string Note,
+    string CalendarKind,
+    string CalendarSource,
 
     DateTimeOffset? Start, // derived: earliest punch
     DateTimeOffset? End,   // derived: latest punch (if >=2 punches)
@@ -29,6 +31,8 @@ public sealed record MonthDayDto(
     bool Exists,
     bool IsNonWorkingDay,
     string Note,
+    string CalendarKind,
+    string CalendarSource,
 
     int PunchCount,
 

@@ -1,15 +1,17 @@
 using Timecard.Api.Data.Entities;
 using Timecard.Api.Domain;
+using Timecard.Api.Data;
+using Timecard.Api.Services;
 
 namespace Timecard.Api.Features.Shared;
 
 public static class Mapping
 {
-    public static DayDto ToDayDto(DateOnly date, WorkDay? day)
+    public static DayDto ToDayDto(DateOnly date, WorkDay? day, ResolvedCalendarDay calendarDay)
     {
         var exists = day is not null;
-        var isNonWorking = day?.IsNonWorkingDay ?? false;
-        var note = day?.Note ?? "";
+        var isNonWorking = !calendarDay.IsWorking;
+        var note = calendarDay.Note;
 
         var planned = isNonWorking ? 0 : WorkRules.PlannedMinutesPerWorkDay;
 
@@ -24,6 +26,8 @@ public static class Mapping
         Exists: exists,
         IsNonWorkingDay: isNonWorking,
         Note: note,
+        CalendarKind: calendarDay.Kind,
+        CalendarSource: calendarDay.Source,
         Start: start,
         End: end,
         PunchCount: punches.Count,
@@ -41,6 +45,6 @@ public static class Mapping
         );
     }
 
-    public static DayDto ToDayDto(WorkDay day)
-        => ToDayDto(day.Date, day);
+    public static DayDto ToDayDto(WorkDay day, ResolvedCalendarDay calendarDay)
+        => ToDayDto(day.Date, day, calendarDay);
 }

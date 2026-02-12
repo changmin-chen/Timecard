@@ -48,12 +48,6 @@ export function useDay() {
     })
   }
 
-  async function setNonWorking(date, payload) {
-    await withError(async () => {
-      day.value = await timecardApi.setNonWorking(date, payload)
-    })
-  }
-
   return {
     day,
     loading,
@@ -62,6 +56,5 @@ export function useDay() {
     deletePunch,
     addAttendanceRequest,
     deleteAttendanceRequest,
-    setNonWorking,
   }
 }

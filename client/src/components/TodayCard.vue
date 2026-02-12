@@ -4,10 +4,9 @@ import { mins, fmtDate, fmtTime } from '../utils.js'
 import { useDay } from '../composables/useDay.js'
 import PunchList from './PunchList.vue'
 import AttendanceForm from './AttendanceForm.vue'
-import NonWorkingForm from './NonWorkingForm.vue'
 import AttendanceList from './AttendanceList.vue'
 
-const { day, loading, refreshToday, punch, deletePunch, addAttendanceRequest, deleteAttendanceRequest, setNonWorking } = useDay()
+const { day, loading, refreshToday, punch, deletePunch, addAttendanceRequest, deleteAttendanceRequest } = useDay()
 
 onMounted(() => refreshToday())
 </script>
@@ -52,6 +51,10 @@ onMounted(() => refreshToday())
         <span class="stat-value">{{ mins(day.flexCandidate) }}</span>
       </div>
     </div>
+    <div v-if="day" class="hint">
+      日曆來源：{{ day.calendarSource }} / {{ day.calendarKind }}
+      <span v-if="day.note">（{{ day.note }}）</span>
+    </div>
 
     <div class="grid2">
       <div>
@@ -65,13 +68,6 @@ onMounted(() => refreshToday())
         <AttendanceForm
           :date="day?.date ?? ''"
           @submit="addAttendanceRequest"
-        />
-
-        <NonWorkingForm
-          :date="day?.date ?? ''"
-          :is-non-working-day="day?.isNonWorkingDay ?? false"
-          :note="day?.note ?? ''"
-          @submit="setNonWorking"
         />
 
         <AttendanceList

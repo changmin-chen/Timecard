@@ -1,48 +1,55 @@
+using Timecard.Api.Constants;
 using Timecard.Api.Data;
 using Timecard.Api.Features.Shared;
+using Timecard.Api.Services;
 
 namespace Timecard.Api.Features.Days;
 
 public static class DayEndpoints
 {
+    private const string CalendarId = WorkCalendarConstants.TaiwanDgpaCalendarId;
+
     public static IEndpointRouteBuilder MapDayEndpoints(this IEndpointRouteBuilder app)
     {
         var g = app.MapGroup("/api/day").WithTags("Day");
 
         g.MapGet("/today", GetToday);
         g.MapGet("/{date}", GetByDate);
-        g.MapPut("/{date}/nonworking", SetNonWorking);
 
         return app;
     }
 
-    public sealed record NonWorkingRequest(bool IsNonWorkingDay, string? Note);
-
-    private static async Task<IResult> GetToday(WorkDayRepository repo, CancellationToken ct)
+    private static async Task<IResult> GetToday(WorkDayRepository repo, IWorkCalendar calendar, CancellationToken ct)
     {
         var date = DateOnly.FromDateTime(DateTime.Now);
         var day = await repo.LoadDay(date, ct);
-        return Results.Ok(Mapping.ToDayDto(date, day));
+
+        try
+        {
+            var calendarDay = await calendar.GetRequiredDayAsync(CalendarId, date, ct);
+            return Results.Ok(Mapping.ToDayDto(date, day, calendarDay));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.Problem(title: "Calendar data missing", detail: ex.Message, statusCode: StatusCodes.Status409Conflict);
+        }
     }
 
-    private static async Task<IResult> GetByDate(WorkDayRepository repo, string date, CancellationToken ct)
+    private static async Task<IResult> GetByDate(WorkDayRepository repo, IWorkCalendar calendar, string date, CancellationToken ct)
     {
         if (!DateOnly.TryParse(date, out var d))
             return Results.BadRequest(new { error = "Invalid date. Use yyyy-MM-dd." });
 
         var day = await repo.LoadDay(d, ct);
-        return Results.Ok(Mapping.ToDayDto(d, day));
-    }
 
-    private static async Task<IResult> SetNonWorking(WorkDayRepository repo, string date, NonWorkingRequest req, CancellationToken ct)
-    {
-        if (!DateOnly.TryParse(date, out var d))
-            return Results.BadRequest(new { error = "Invalid date. Use yyyy-MM-dd." });
-
-        var day = await repo.GetOrCreateDay(d, ct);
-        day.SetNonWorking(req.IsNonWorkingDay, req.Note);
-
-        await repo.SaveChangesAsync(ct);
-        return Results.Ok(Mapping.ToDayDto(day));
+        try
+        {
+            var calendarDay = await calendar.GetRequiredDayAsync(CalendarId, d, ct);
+            return Results.Ok(Mapping.ToDayDto(d, day, calendarDay));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.Problem(title: "Calendar data missing", detail: ex.Message, statusCode: StatusCodes.Status409Conflict);
+        }
     }
 }

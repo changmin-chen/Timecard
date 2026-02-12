@@ -9,6 +9,8 @@ public sealed class TimecardDb(DbContextOptions<TimecardDb> options) : DbContext
     public DbSet<WorkDay> WorkDays => Set<WorkDay>();
     public DbSet<PunchEvent> Punches => Set<PunchEvent>();
     public DbSet<AttendanceRequest> AttendanceRequests => Set<AttendanceRequest>();
+    public DbSet<CalendarDay> CalendarDays => Set<CalendarDay>();
+    public DbSet<CalendarDayOverride> CalendarDayOverrides => Set<CalendarDayOverride>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,8 +27,6 @@ public sealed class TimecardDb(DbContextOptions<TimecardDb> options) : DbContext
             e.HasKey(x => x.Id);
             e.Property(x => x.Date).HasConversion(dateOnlyConverter);
             e.HasIndex(x => x.Date).IsUnique();
-            e.Property(x => x.Note).HasMaxLength(4000);
-            e.Property(x => x.IsNonWorkingDay);
 
             e.Metadata.FindNavigation(nameof(WorkDay.Punches))!
                 .SetPropertyAccessMode(PropertyAccessMode.Field);
@@ -62,6 +62,30 @@ public sealed class TimecardDb(DbContextOptions<TimecardDb> options) : DbContext
             e.Property(x => x.Start).HasConversion(timeOnlyConverter);
             e.Property(x => x.End).HasConversion(timeOnlyConverter);
             e.HasIndex(x => new { x.WorkDayId, x.Category });
+        });
+
+        modelBuilder.Entity<CalendarDay>(e =>
+        {
+            e.HasKey(x => new { x.CalendarId, x.Date });
+            e.Property(x => x.CalendarId).HasMaxLength(64);
+            e.Property(x => x.Date).HasConversion(dateOnlyConverter);
+            e.Property(x => x.Kind).HasMaxLength(64);
+            e.Property(x => x.Note).HasMaxLength(4000);
+            e.Property(x => x.Source).HasMaxLength(64);
+            e.Property(x => x.VersionImportedAt);
+            e.HasIndex(x => x.Date);
+        });
+
+        modelBuilder.Entity<CalendarDayOverride>(e =>
+        {
+            e.HasKey(x => new { x.CalendarId, x.Date });
+            e.Property(x => x.CalendarId).HasMaxLength(64);
+            e.Property(x => x.Date).HasConversion(dateOnlyConverter);
+            e.Property(x => x.Kind).HasMaxLength(64);
+            e.Property(x => x.Note).HasMaxLength(4000);
+            e.Property(x => x.Source).HasMaxLength(64);
+            e.Property(x => x.UpdatedAt);
+            e.HasIndex(x => x.Date);
         });
     }
 }

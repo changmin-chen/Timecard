@@ -21,13 +21,6 @@ export const timecardApi = {
     deleteAttendanceRequest: (id) =>
         client.request(`/api/attendance-requests/${id}`, { method: "DELETE" }),
 
-    setNonWorking: (date, payload) =>
-        client.request(`/api/day/${date}/nonworking`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        }),
-
     getMonth: (y, m, includeEmpty) =>
         client.request(`/api/month/${y}/${m}?includeEmpty=${includeEmpty}`)
 };

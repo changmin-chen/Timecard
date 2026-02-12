@@ -9,8 +9,6 @@ const emit = defineEmits(['submit'])
 const categories = [
   { value: 'Leave', label: '請假 (Leave)' },
   { value: 'Trip', label: '出差 (Trip)' },
-  { value: 'Holiday', label: '假日 (Holiday)' },
-  { value: 'Typhoon', label: '颱風假 (Typhoon)' },
   { value: 'Other', label: '其他 (Other)' },
 ]
 

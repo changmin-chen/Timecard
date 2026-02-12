@@ -1,11 +1,14 @@
+using Timecard.Api.Constants;
 using Timecard.Api.Data;
 using Timecard.Api.Features.Shared;
+using Timecard.Api.Services;
 
 namespace Timecard.Api.Features.Punch;
 
 public static class PunchEndpoints
 {
     private static readonly TimeSpan MinInterval = TimeSpan.FromSeconds(30);
+    private const string CalendarId = WorkCalendarConstants.TaiwanDgpaCalendarId;
 
     public static IEndpointRouteBuilder MapPunchEndpoints(this IEndpointRouteBuilder app)
     {
@@ -22,29 +25,50 @@ public static class PunchEndpoints
 
     public sealed record PunchCreate(DateTimeOffset? At, string? Note, bool Force);
 
-    private static async Task<IResult> AddPunch(WorkDayRepository repo, PunchCreate? req, CancellationToken ct)
+    private static async Task<IResult> AddPunch(WorkDayRepository repo, IWorkCalendar calendar, PunchCreate? req, CancellationToken ct)
     {
         var now = req?.At ?? DateTimeOffset.UtcNow;
         var date = DateOnly.FromDateTime(now.LocalDateTime);
+
+        ResolvedCalendarDay calendarDay;
+        try
+        {
+            calendarDay = await calendar.GetRequiredDayAsync(CalendarId, date, ct);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.Problem(title: "Calendar data missing", detail: ex.Message, statusCode: StatusCodes.Status409Conflict);
+        }
+
         var day = await repo.GetOrCreateDay(date, ct);
 
         var result = day.AddPunch(now, req?.Note, MinInterval, req?.Force == true);
         if (result.ToErrorResult() is { } err) return err;
 
         await repo.SaveChangesAsync(ct);
-        return Results.Ok(Mapping.ToDayDto(day));
+        return Results.Ok(Mapping.ToDayDto(day, calendarDay));
     }
 
-    private static async Task<IResult> DeletePunch(WorkDayRepository repo, int id, CancellationToken ct)
+    private static async Task<IResult> DeletePunch(WorkDayRepository repo, IWorkCalendar calendar, int id, CancellationToken ct)
     {
         var day = await repo.LoadByPunchId(id, ct);
         if (day is null) return Results.NotFound();
+
+        ResolvedCalendarDay calendarDay;
+        try
+        {
+            calendarDay = await calendar.GetRequiredDayAsync(CalendarId, day.Date, ct);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.Problem(title: "Calendar data missing", detail: ex.Message, statusCode: StatusCodes.Status409Conflict);
+        }
 
         var result = day.RemovePunch(id);
         if (result.ToErrorResult() is { } err) return err;
 
         await repo.SaveChangesAsync(ct);
-        return Results.Ok(Mapping.ToDayDto(day));
+        return Results.Ok(Mapping.ToDayDto(day, calendarDay));
     }
 
     private static async Task<IResult> GetStatus(WorkDayRepository repo, string? date, CancellationToken ct)
