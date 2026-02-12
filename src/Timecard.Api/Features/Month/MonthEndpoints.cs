@@ -66,12 +66,12 @@ public static class MonthEndpoints
             var (_, _, worked) = day?.DeriveSpan() ?? (null, null, 0);
             var extension = day?.CalculateExtensionMinutes() ?? 0;
             var computed = WorkRules.ComputeDay(planned, worked, extension);
-            return new DayWithComputed(date, computed);
+            return new DatedWorkSummary(date, computed);
         });
 
-        var monthComputed = WorkRules.ComputeMonth(computedForMonth);
+        var monthReport = WorkRules.ComputeMonth(computedForMonth);
 
-        var dtoDays = monthComputed.Days.Select(d =>
+        var dtoDays = monthReport.Days.Select(d =>
         {
             var exists = existingDates.Contains(d.Date);
             workDayMap.TryGetValue(d.Date, out var src);
@@ -90,13 +90,13 @@ public static class MonthEndpoints
                 ExtensionMinutes: d.Day.CreditedMinutes,
                 EffectiveMinutes: d.Day.EffectiveMinutes,
                 DeltaMinutes: d.Day.DeltaMinutes,
-                FlexCandidate: d.Day.FlexCandidate,
-                FlexApplied: d.FlexApplied,
-                FlexBankEnd: d.FlexBankEnd,
+                FlexDeltaMinutes: d.Day.FlexDeltaMinutes,
+                FlexUsedMinutes: d.FlexUsedMinutes,
+                FlexBankBalance: d.FlexBankBalance,
                 DeficitMinutes: d.DeficitMinutes
             );
         }).ToList();
 
-        return Results.Ok(new MonthDto(Year: year, Month: month, FlexBankEnd: monthComputed.FlexBankEnd, Days: dtoDays));
+        return Results.Ok(new MonthDto(Year: year, Month: month, FlexBankBalance: monthReport.FlexBankBalance, Days: dtoDays));
     }
 }

@@ -36,7 +36,7 @@ public static class Mapping
         ExtensionMinutes: computed.CreditedMinutes,
         EffectiveMinutes: computed.EffectiveMinutes,
         DeltaMinutes: computed.DeltaMinutes,
-        FlexCandidate: computed.FlexCandidate,
+        FlexDeltaMinutes: computed.FlexDeltaMinutes,
         Punches: punches.Select(p => new PunchDto(p.Id, p.At, p.Note)).ToList(),
         AttendanceRequests: day?.AttendanceRequests
             .OrderBy(a => a.Start)

@@ -20,7 +20,7 @@ public sealed record DayDto(
     int ExtensionMinutes,
     int EffectiveMinutes,
     int DeltaMinutes,
-    int FlexCandidate,
+    int FlexDeltaMinutes,
 
     IReadOnlyList<PunchDto> Punches,
     IReadOnlyList<AttendanceRequestDto> AttendanceRequests
@@ -41,16 +41,16 @@ public sealed record MonthDayDto(
     int ExtensionMinutes,
     int EffectiveMinutes,
     int DeltaMinutes,
-    int FlexCandidate,
+    int FlexDeltaMinutes,
 
-    int FlexApplied,
-    int FlexBankEnd,
+    int FlexUsedMinutes,
+    int FlexBankBalance,
     int DeficitMinutes
 );
 
 public sealed record MonthDto(
     int Year,
     int Month,
-    int FlexBankEnd,
+    int FlexBankBalance,
     IReadOnlyList<MonthDayDto> Days
 );

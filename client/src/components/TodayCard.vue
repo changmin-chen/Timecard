@@ -48,7 +48,7 @@ onMounted(() => refreshToday())
       </div>
       <div class="stat-item">
         <span class="stat-label">彈性候選</span>
-        <span class="stat-value">{{ mins(day.flexCandidate) }}</span>
+        <span class="stat-value">{{ mins(day.flexDeltaMinutes) }}</span>
       </div>
     </div>
     <div v-if="day" class="hint">

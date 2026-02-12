@@ -1,79 +1,58 @@
 namespace Timecard.Api.Domain;
 
 /// <summary>
-/// 1) 每天 9 小時（包含午休）
-/// 2) 每天彈性時數最多累積/使用 55 分鐘
-/// 3) 彈性時數月重置
+/// 工時計算規則：
+/// 1) 每天標準工時 9 小時（540 分鐘，含午休）
+/// 2) 每日彈性時數上限 ±55 分鐘
+/// 3) 彈性時數按月累積，月底重置
 /// </summary>
 public static class WorkRules
 {
     public const int PlannedMinutesPerWorkDay = 9 * 60;
     public const int DailyFlexCapMinutes = 55;
 
-    public static DayComputed ComputeDay(int plannedMinutes, int workedMinutes, int creditedMinutes)
+    /// <summary>
+    /// 結算單日工時，將超時/不足 clamp 在 ±55 分鐘內作為彈性增減量。
+    /// 免上班日不累積彈性。
+    /// </summary>
+    public static DailyWorkSummary ComputeDay(int plannedMinutes, int workedMinutes, int creditedMinutes)
     {
         var effective = workedMinutes + creditedMinutes;
         var delta = effective - plannedMinutes;
 
         // 免上班日：不累積也不使用彈性（避免「放假還賺彈性」）
-        var flexCandidate = plannedMinutes == 0 ? 0 : Math.Clamp(delta, -DailyFlexCapMinutes, DailyFlexCapMinutes);
+        var flexDelta = plannedMinutes == 0 ? 0 : Math.Clamp(delta, -DailyFlexCapMinutes, DailyFlexCapMinutes);
 
-        return new DayComputed(plannedMinutes, workedMinutes, creditedMinutes, effective, delta, flexCandidate);
+        return new DailyWorkSummary(plannedMinutes, workedMinutes, creditedMinutes, effective, delta, flexDelta);
     }
 
-    public static MonthComputed ComputeMonth(IEnumerable<DayWithComputed> daysInAnyOrder)
+    /// <summary>
+    /// 按日期順序逐日結算彈性銀行：正彈性存入、負彈性提領（不足部分記為 deficit）。
+    /// </summary>
+    public static MonthlyFlexReport ComputeMonth(IEnumerable<DatedWorkSummary> daysInAnyOrder)
     {
         var days = daysInAnyOrder.OrderBy(d => d.Date).ToList();
         var bank = 0;
-        var results = new List<MonthDayComputed>(days.Count);
+        var results = days.Select(d => AccumulateFlex(d, ref bank)).ToList();
+        return new MonthlyFlexReport(results, FlexBankBalance: bank);
+    }
 
-        foreach (var d in days)
+    /// <summary>處理單日的彈性存提，更新銀行餘額。</summary>
+    private static DailyFlexDetail AccumulateFlex(DatedWorkSummary d, ref int bank)
+    {
+        if (d.Summary.PlannedMinutes == 0)
+            return new DailyFlexDetail(d.Date, d.Summary, FlexUsedMinutes: 0, FlexBankBalance: bank, DeficitMinutes: 0);
+
+        var delta = d.Summary.FlexDeltaMinutes;
+        if (delta >= 0)
         {
-            if (d.Computed.PlannedMinutes == 0)
-            {
-                results.Add(new MonthDayComputed(d.Date, d.Computed, FlexApplied: 0, FlexBankEnd: bank, DeficitMinutes: 0));
-                continue;
-            }
-
-            var desired = d.Computed.FlexCandidate; // [-55, +55]
-            if (desired >= 0)
-            {
-                bank += desired;
-                results.Add(new MonthDayComputed(d.Date, d.Computed, FlexApplied: desired, FlexBankEnd: bank, DeficitMinutes: 0));
-                continue;
-            }
-
-            var need = -desired;
-            var used = Math.Min(bank, need);
-            bank -= used;
-
-            var applied = -used;         // negative
-            var deficit = need - used;   // 需要用請假/出差/補登等方式補
-
-            results.Add(new MonthDayComputed(d.Date, d.Computed, FlexApplied: applied, FlexBankEnd: bank, DeficitMinutes: deficit));
+            bank += delta;
+            return new DailyFlexDetail(d.Date, d.Summary, FlexUsedMinutes: delta, FlexBankBalance: bank, DeficitMinutes: 0);
         }
 
-        return new MonthComputed(results, FlexBankEnd: bank);
+        var need = -delta;
+        var used = Math.Min(bank, need);
+        bank -= used;
+        return new DailyFlexDetail(d.Date, d.Summary, FlexUsedMinutes: -used, FlexBankBalance: bank, DeficitMinutes: need - used);
     }
 }
-
-public sealed record DayComputed(
-    int PlannedMinutes,
-    int WorkedMinutes,
-    int CreditedMinutes,
-    int EffectiveMinutes,
-    int DeltaMinutes,
-    int FlexCandidate
-);
-
-public sealed record DayWithComputed(DateOnly Date, DayComputed Computed);
-
-public sealed record MonthDayComputed(
-    DateOnly Date,
-    DayComputed Day,
-    int FlexApplied,
-    int FlexBankEnd,
-    int DeficitMinutes
-);
-
-public sealed record MonthComputed(IReadOnlyList<MonthDayComputed> Days, int FlexBankEnd);
