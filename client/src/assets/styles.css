@@ -1,12 +1,12 @@
 * { box-sizing: border-box; }
 :root {
-  --bg: #0b0d10;
-  --card: #141821;
-  --text: #e7eaf0;
-  --muted: #a6afc3;
-  --line: #273043;
-  --primary: #5aa2ff;
-  --danger: #ff6b6b;
+  --bg: #f5f6f8;
+  --card: #ffffff;
+  --text: #1a1a2e;
+  --muted: #6b7280;
+  --line: #e2e5ea;
+  --primary: #2563eb;
+  --danger: #dc2626;
 }
 
 html, body {
@@ -29,7 +29,7 @@ h3 { margin: 14px 0 8px; font-size: 16px; color: var(--muted); }
   border-radius: 14px;
   padding: 16px;
   margin: 12px 0;
-  box-shadow: 0 10px 25px rgba(0,0,0,.25);
+  box-shadow: 0 4px 12px rgba(0,0,0,.06);
 }
 
 .row { display: flex; gap: 14px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
@@ -40,16 +40,16 @@ h3 { margin: 14px 0 8px; font-size: 16px; color: var(--muted); }
 
 button {
   border: 1px solid var(--line);
-  background: #1a2130;
+  background: #f0f1f3;
   color: var(--text);
   padding: 10px 12px;
   border-radius: 10px;
   cursor: pointer;
 }
-button:hover { filter: brightness(1.1); }
-button.primary { background: rgba(90,162,255,.18); border-color: rgba(90,162,255,.6); }
+button:hover { filter: brightness(0.96); }
+button.primary { background: rgba(37,99,235,.1); border-color: rgba(37,99,235,.4); color: var(--primary); }
 button.ghost { background: transparent; }
-button.danger { background: rgba(255,107,107,.14); border-color: rgba(255,107,107,.55); }
+button.danger { background: rgba(220,38,38,.08); border-color: rgba(220,38,38,.35); color: var(--danger); }
 
 .form { display: grid; gap: 10px; }
 label { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
@@ -58,9 +58,11 @@ input {
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 10px 12px;
-  background: #0f131b;
+  background: #f9fafb;
   color: var(--text);
 }
+.field { display: grid; gap: 6px; }
+.field-label { font-size: 13px; color: var(--muted); }
 .small { font-size: 13px; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
 .hint { color: var(--muted); font-size: 13px; margin-top: 8px; }
@@ -70,7 +72,7 @@ input {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 10px 12px;
-  background: #0f131b;
+  background: #f9fafb;
   margin: 8px 0;
   display: flex;
   justify-content: space-between;
@@ -84,8 +86,92 @@ input {
 .tableWrap { overflow: auto; border: 1px solid var(--line); border-radius: 12px; margin-top: 10px; }
 table { width: 100%; border-collapse: collapse; min-width: 980px; }
 th, td { border-bottom: 1px solid var(--line); padding: 10px 10px; text-align: left; font-size: 13px; }
-th { color: var(--muted); font-weight: 600; background: rgba(255,255,255,.02); position: sticky; top: 0; }
-tr:hover td { background: rgba(255,255,255,.02); }
+th { color: var(--muted); font-weight: 600; background: #f9fafb; position: sticky; top: 0; }
+tr:hover td { background: #f5f6f8; }
 .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); font-size: 12px; }
 .bad { color: var(--danger); }
 .good { color: var(--primary); }
+
+select {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #f9fafb;
+  color: var(--text);
+  font-size: 14px;
+}
+
+/* vue-datepicker light theme overrides */
+.dp__theme_light {
+  --dp-background-color: #ffffff;
+  --dp-text-color: #1a1a2e;
+  --dp-hover-color: #f0f1f3;
+  --dp-hover-text-color: #1a1a2e;
+  --dp-primary-color: #2563eb;
+  --dp-primary-disabled-color: #93b4f5;
+  --dp-primary-text-color: #fff;
+  --dp-secondary-color: #6b7280;
+  --dp-border-color: #e2e5ea;
+  --dp-menu-border-color: #e2e5ea;
+  --dp-border-color-hover: #2563eb;
+  --dp-disabled-color: #f0f1f3;
+  --dp-disabled-color-text: #b0b0b0;
+  --dp-scroll-bar-background: #f5f6f8;
+  --dp-scroll-bar-color: #e2e5ea;
+  --dp-success-color: #2563eb;
+  --dp-success-color-disabled: #93b4f5;
+  --dp-icon-color: #6b7280;
+  --dp-danger-color: #dc2626;
+  --dp-marker-color: #2563eb;
+  --dp-tooltip-color: #f9fafb;
+  --dp-highlight-color: rgba(37,99,235,.08);
+  --dp-input-background-color: #f9fafb;
+}
+.dp__input {
+  border-radius: 10px !important;
+  font-family: inherit !important;
+}
+
+/* stat grid for TodayCard */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stat-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+.stat-value {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* badge variants */
+.badge-category {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(37,99,235,.08);
+  color: var(--primary);
+  border: 1px solid rgba(37,99,235,.2);
+}
+.badge-category.leave { background: rgba(234,179,8,.1); color: #a16207; border-color: rgba(234,179,8,.3); }
+.badge-category.trip { background: rgba(22,163,74,.08); color: #15803d; border-color: rgba(22,163,74,.25); }
+.badge-category.holiday { background: rgba(147,51,234,.08); color: #7e22ce; border-color: rgba(147,51,234,.25); }
+.badge-category.typhoon { background: rgba(220,38,38,.08); color: #dc2626; border-color: rgba(220,38,38,.25); }
+
+.note-text {
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+  margin-top: 2px;
+}
