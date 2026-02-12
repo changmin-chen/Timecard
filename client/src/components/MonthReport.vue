@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import { mins } from '../utils.js'
 import { useMonth } from '../composables/useMonth.js'
 
-const { month, error, loading, loadMonth } = useMonth()
+const { month, loading, loadMonth } = useMonth()
 
 const monthPick = ref('')
 const includeEmpty = ref(false)
@@ -39,7 +39,6 @@ function deficitCls(d) {
 
 <template>
   <section class="card">
-    <div v-if="error" class="hint bad">{{ error }}</div>
     <div class="row">
       <div>
         <h2>月報表</h2>

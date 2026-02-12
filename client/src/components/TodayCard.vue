@@ -7,14 +7,13 @@ import AttendanceForm from './AttendanceForm.vue'
 import NonWorkingForm from './NonWorkingForm.vue'
 import AttendanceList from './AttendanceList.vue'
 
-const { day, error, loading, refreshToday, punch, deletePunch, addAttendanceRequest, deleteAttendanceRequest, setNonWorking } = useDay()
+const { day, loading, refreshToday, punch, deletePunch, addAttendanceRequest, deleteAttendanceRequest, setNonWorking } = useDay()
 
 onMounted(() => refreshToday())
 </script>
 
 <template>
   <section class="card">
-    <div v-if="error" class="hint bad">{{ error }}</div>
     <div class="row">
       <div>
         <h2>今天</h2>

@@ -1,18 +1,18 @@
 import { ref } from 'vue'
 import { timecardApi } from '../timecardApi.js'
+import { useToast } from './useToast.js'
 
 export function useDay() {
   const day = ref(null)
-  const error = ref('')
   const loading = ref(false)
+  const toast = useToast()
 
   async function withError(fn) {
-    error.value = ''
     loading.value = true
     try {
       await fn()
     } catch (err) {
-      error.value = err.message
+      toast.error(err.message)
     } finally {
       loading.value = false
     }
@@ -56,7 +56,6 @@ export function useDay() {
 
   return {
     day,
-    error,
     loading,
     refreshToday,
     punch,

@@ -1,6 +1,7 @@
 <script setup>
 import TodayCard from './components/TodayCard.vue'
 import MonthReport from './components/MonthReport.vue'
+import ToastContainer from './components/ToastContainer.vue'
 </script>
 
 <template>
@@ -12,6 +13,7 @@ import MonthReport from './components/MonthReport.vue'
   <main class="wrap">
     <TodayCard />
     <MonthReport />
+    <ToastContainer />
 
     <footer class="wrap small">
       <div class="hint">資料存在 PostgreSQL。刪掉資料庫或資料表會清空既有資料。</div>
