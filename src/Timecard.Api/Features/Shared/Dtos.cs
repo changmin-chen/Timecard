@@ -1,46 +1,52 @@
 namespace Timecard.Api.Features.Shared;
 
-public sealed record SessionDto(int id, DateTimeOffset start, DateTimeOffset? end);
-public sealed record AdjustmentDto(int id, string kind, int minutes, string note);
+public sealed record PunchDto(int Id, DateTimeOffset At, string Note);
+public sealed record AttendanceRequestDto(int Id, string Category, string Start, string End, string Note);
 
 public sealed record DayDto(
-    string date, // yyyy-MM-dd
-    bool exists,
-    bool isNonWorkingDay,
-    string note,
+    string Date, // yyyy-MM-dd
+    bool Exists,
+    bool IsNonWorkingDay,
+    string Note,
 
-    int plannedMinutes,
-    int workedMinutes,
-    int creditedMinutes,
-    int effectiveMinutes,
-    int deltaMinutes,
-    int flexCandidate,
+    DateTimeOffset? Start, // derived: earliest punch
+    DateTimeOffset? End,   // derived: latest punch (if >=2 punches)
+    int PunchCount,
 
-    IReadOnlyList<SessionDto> sessions,
-    IReadOnlyList<AdjustmentDto> adjustments
+    int PlannedMinutes,
+    int WorkedMinutes,
+    int ExtensionMinutes,
+    int EffectiveMinutes,
+    int DeltaMinutes,
+    int FlexCandidate,
+
+    IReadOnlyList<PunchDto> Punches,
+    IReadOnlyList<AttendanceRequestDto> AttendanceRequests
 );
 
 public sealed record MonthDayDto(
-    string date,
-    bool exists,
-    bool isNonWorkingDay,
-    string note,
+    string Date,
+    bool Exists,
+    bool IsNonWorkingDay,
+    string Note,
 
-    int plannedMinutes,
-    int workedMinutes,
-    int creditedMinutes,
-    int effectiveMinutes,
-    int deltaMinutes,
-    int flexCandidate,
+    int PunchCount,
 
-    int flexApplied,
-    int flexBankEnd,
-    int deficitMinutes
+    int PlannedMinutes,
+    int WorkedMinutes,
+    int ExtensionMinutes,
+    int EffectiveMinutes,
+    int DeltaMinutes,
+    int FlexCandidate,
+
+    int FlexApplied,
+    int FlexBankEnd,
+    int DeficitMinutes
 );
 
 public sealed record MonthDto(
-    int year,
-    int month,
-    int flexBankEnd,
-    IReadOnlyList<MonthDayDto> days
+    int Year,
+    int Month,
+    int FlexBankEnd,
+    IReadOnlyList<MonthDayDto> Days
 );
