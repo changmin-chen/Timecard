@@ -26,7 +26,7 @@ public static class PunchEndpoints
 
     public sealed record PunchCreate(DateTimeOffset? At, string? Note, bool Force);
 
-    private static async Task<IResult> AddPunch(WorkDayRepository repo, IWorkCalendar calendar, PunchCreate? req, CancellationToken ct)
+    private static async Task<IResult> AddPunch(WorkDayRepository repo, IWorkCalendar calendar, PunchCreate? req, HttpContext http, CancellationToken ct)
     {
         var now = req?.At ?? DateTimeOffset.UtcNow;
         var date = DateOnly.FromDateTime(now.LocalDateTime);
@@ -44,13 +44,13 @@ public static class PunchEndpoints
         var day = await repo.GetOrCreateDay(date, ct);
 
         var result = day.AddPunch(now, req?.Note, MinInterval, req?.Force == true);
-        if (result.ToErrorResult() is { } err) return err;
+        if (!result.IsSuccess) return result.Error!.ToProblem(http);
 
         await repo.SaveChangesAsync(ct);
         return Results.Ok(Mapping.ToDayDto(day, calendarDay));
     }
 
-    private static async Task<IResult> DeletePunch(WorkDayRepository repo, IWorkCalendar calendar, int id, CancellationToken ct)
+    private static async Task<IResult> DeletePunch(WorkDayRepository repo, IWorkCalendar calendar, int id, HttpContext http, CancellationToken ct)
     {
         var day = await repo.LoadByPunchId(id, ct);
         if (day is null) return Results.NotFound();
@@ -66,7 +66,7 @@ public static class PunchEndpoints
         }
 
         var result = day.RemovePunch(id);
-        if (result.ToErrorResult() is { } err) return err;
+        if (!result.IsSuccess) return result.Error!.ToProblem(http);
 
         await repo.SaveChangesAsync(ct);
         return Results.Ok(Mapping.ToDayDto(day, calendarDay));

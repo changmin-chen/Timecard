@@ -23,79 +23,79 @@ public sealed class WorkDay
     public IReadOnlyList<PunchEvent> Punches => _punches;
     public IReadOnlyList<AttendanceRequest> AttendanceRequests => _attendanceRequests;
 
-    public DomainResult<PunchEvent> AddPunch(DateTimeOffset at, string? note, TimeSpan minInterval, bool force)
+    public Result<PunchEvent> AddPunch(DateTimeOffset at, string? note, TimeSpan minInterval, bool force)
     {
         var dateCheck = ValidatePunchDate(at);
-        if (!dateCheck.IsSuccess) return dateCheck.Error!.Message;
+        if (!dateCheck.IsSuccess) return Result<PunchEvent>.Fail(dateCheck.Error!);
 
         var last = _punches.OrderByDescending(p => p.At).FirstOrDefault();
         if (!force && last is not null && (at - last.At) < minInterval)
-            return "Too fast. Please wait before creating another punch.";
+            return Result<PunchEvent>.Fail(Errors.WorkDay.PunchTooFast);
 
         var punch = new PunchEvent(at, note);
         _punches.Add(punch);
-        return DomainResult<PunchEvent>.Ok(punch);
+        return Result<PunchEvent>.Ok(punch);
     }
 
-    public DomainResult RemovePunch(int punchId)
+    public Result.Result RemovePunch(int punchId)
     {
         var punch = _punches.FirstOrDefault(p => p.Id == punchId);
         if (punch is null)
-            return "Punch not found.";
+            return Result.Result.Fail(Errors.WorkDay.PunchNotFound);
 
         _punches.Remove(punch);
-        return DomainResult.Ok();
+        return Result.Result.Ok();
     }
 
-    public DomainResult<AttendanceRequest> AddAttendanceRequest(string category, TimeOnly start, TimeOnly end, string? note)
+    public Result<AttendanceRequest> AddAttendanceRequest(string category, TimeOnly start, TimeOnly end, string? note)
     {
         if (string.IsNullOrWhiteSpace(category))
-            return "Category is required.";
+            return Result<AttendanceRequest>.Fail(Errors.WorkDay.CategoryRequired);
 
         if (start >= end)
-            return "Start must be before End.";
+            return Result<AttendanceRequest>.Fail(Errors.WorkDay.StartBeforeEnd);
 
         var overlapCheck = CheckOverlap(start, end, excludeId: null);
-        if (!overlapCheck.IsSuccess) return overlapCheck.Error!.Message;
+        if (!overlapCheck.IsSuccess) return Result<AttendanceRequest>.Fail(overlapCheck.Error!);
 
         var gapCheck = CheckGaps(start, end, excludeId: null);
-        if (!gapCheck.IsSuccess) return gapCheck.Error!.Message;
+        if (!gapCheck.IsSuccess) return Result<AttendanceRequest>.Fail(gapCheck.Error!);
 
         var request = new AttendanceRequest(category, start, end, note);
         _attendanceRequests.Add(request);
-        return DomainResult<AttendanceRequest>.Ok(request);
+        return Result<AttendanceRequest>.Ok(request);
     }
 
-    public DomainResult UpdateAttendanceRequest(int id, string category, TimeOnly start, TimeOnly end, string? note)
+    public Result.Result UpdateAttendanceRequest(int id, string category, TimeOnly start, TimeOnly end, string? note)
     {
         if (string.IsNullOrWhiteSpace(category))
-            return "Category is required.";
+            return Result.Result.Fail(Errors.WorkDay.CategoryRequired);
 
         if (start >= end)
-            return "Start must be before End.";
+            return Result.Result.Fail(Errors.WorkDay.StartBeforeEnd);
 
         var request = _attendanceRequests.FirstOrDefault(a => a.Id == id);
         if (request is null)
-            return "Attendance request not found.";
+            return Result.Result.Fail(Errors.WorkDay.AttendanceNotFound);
 
         var overlapCheck = CheckOverlap(start, end, excludeId: id);
-        if (!overlapCheck.IsSuccess) return overlapCheck.Error!.Message;
+        if (!overlapCheck.IsSuccess) return overlapCheck;
 
         var gapCheck = CheckGaps(start, end, excludeId: id);
-        if (!gapCheck.IsSuccess) return gapCheck.Error!.Message;
+        if (!gapCheck.IsSuccess) return gapCheck;
 
         request.Update(category, start, end, note);
-        return DomainResult.Ok();
+        return Result.Result.Ok();
     }
 
-    public DomainResult RemoveAttendanceRequest(int id)
+    public Result.Result RemoveAttendanceRequest(int id)
     {
         var request = _attendanceRequests.FirstOrDefault(a => a.Id == id);
         if (request is null)
-            return "Attendance request not found.";
+            return Result.Result.Fail(Errors.WorkDay.AttendanceNotFound);
 
         _attendanceRequests.Remove(request);
-        return DomainResult.Ok();
+        return Result.Result.Ok();
     }
 
     public (DateTimeOffset? Start, DateTimeOffset? End, int WorkedMinutes) DeriveSpan()
@@ -149,20 +149,20 @@ public sealed class WorkDay
         return (int)totalSpan;
     }
 
-    private DomainResult CheckOverlap(TimeOnly start, TimeOnly end, int? excludeId)
+    private Result.Result CheckOverlap(TimeOnly start, TimeOnly end, int? excludeId)
     {
         foreach (var existing in _attendanceRequests)
         {
             if (excludeId.HasValue && existing.Id == excludeId.Value) continue;
 
             if (start < existing.End && end > existing.Start)
-                return "Attendance request overlaps with an existing one.";
+                return Result.Result.Fail(Errors.WorkDay.Overlap);
         }
 
-        return DomainResult.Ok();
+        return Result.Result.Ok();
     }
 
-    private DomainResult CheckGaps(TimeOnly newStart, TimeOnly newEnd, int? excludeId)
+    private Result.Result CheckGaps(TimeOnly newStart, TimeOnly newEnd, int? excludeId)
     {
         var segments = new List<(TimeOnly Start, TimeOnly End)>();
 
@@ -187,7 +187,7 @@ public sealed class WorkDay
 
         // If there's only one segment, no gaps possible
         if (segments.Count <= 1)
-            return DomainResult.Ok();
+            return Result.Result.Ok();
 
         // Sort by start time and check for gaps
         segments.Sort((a, b) => a.Start.CompareTo(b.Start));
@@ -195,18 +195,18 @@ public sealed class WorkDay
         for (int i = 1; i < segments.Count; i++)
         {
             if (segments[i].Start > segments[i - 1].End)
-                return "There is a gap between time segments. Attendance requests must be contiguous with punch time.";
+                return Result.Result.Fail(Errors.WorkDay.Gap);
         }
 
-        return DomainResult.Ok();
+        return Result.Result.Ok();
     }
 
-    private DomainResult ValidatePunchDate(DateTimeOffset at)
+    private Result.Result ValidatePunchDate(DateTimeOffset at)
     {
         var punchDate = DateOnly.FromDateTime(at.LocalDateTime);
         if (punchDate != Date)
-            return "Changing punch date is not supported in MVP.";
+            return Result.Result.Fail(Errors.WorkDay.InvalidPunchDate);
 
-        return DomainResult.Ok();
+        return Result.Result.Ok();
     }
 }

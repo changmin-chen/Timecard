@@ -12,7 +12,7 @@ export function useMonth() {
     try {
       month.value = await timecardApi.getMonth(year, m, includeEmpty)
     } catch (err) {
-      toast.error(err.message)
+      toast.errorFrom(err)
     } finally {
       loading.value = false
     }
