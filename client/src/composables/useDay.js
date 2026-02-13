@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { timecardApi } from '../timecardApi.js'
 import { useToast } from './useToast.js'
+import { invalidateMonth } from './useMonthInvalidation.js'
 
 export function useDay() {
   const day = ref(null)
@@ -27,24 +28,28 @@ export function useDay() {
   async function punch() {
     await withError(async () => {
       day.value = await timecardApi.punch()
+      invalidateMonth()
     })
   }
 
   async function deletePunch(id) {
     await withError(async () => {
       day.value = await timecardApi.deletePunch(id)
+      invalidateMonth()
     })
   }
 
   async function addAttendanceRequest(payload) {
     await withError(async () => {
       day.value = await timecardApi.addAttendanceRequest(payload)
+      invalidateMonth()
     })
   }
 
   async function deleteAttendanceRequest(id) {
     await withError(async () => {
       day.value = await timecardApi.deleteAttendanceRequest(id)
+      invalidateMonth()
     })
   }
 

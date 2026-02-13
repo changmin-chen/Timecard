@@ -169,6 +169,12 @@ select {
 .badge-category.holiday { background: rgba(147,51,234,.08); color: #7e22ce; border-color: rgba(147,51,234,.25); }
 .badge-category.typhoon { background: rgba(220,38,38,.08); color: #dc2626; border-color: rgba(220,38,38,.25); }
 
+.duration {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
 .note-text {
   font-size: 12px;
   color: var(--muted);

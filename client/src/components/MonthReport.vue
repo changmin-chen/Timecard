@@ -1,11 +1,13 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { mins } from '../utils.js'
 import { useMonth } from '../composables/useMonth.js'
+import { useMonthInvalidation } from '../composables/useMonthInvalidation.js'
 
 const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 
 const { month, loading, loadMonth } = useMonth()
+const { monthStale } = useMonthInvalidation()
 
 const monthPick = ref('')
 const includeEmpty = ref(false)
@@ -17,6 +19,14 @@ onMounted(() => {
   const mm = String(now.getMonth() + 1).padStart(2, '0')
   monthPick.value = `${yyyy}-${mm}`
   load()
+})
+
+watch(monthStale, () => {
+  if (month.value) load()
+})
+
+watch(includeEmpty, () => {
+  if (month.value) load()
 })
 
 function load() {
@@ -87,7 +97,7 @@ const totalWorkDays = computed(() => {
           <input type="checkbox" v-model="includeEmpty" />
           顯示所有日期
         </label>
-        <button class="ghost" @click="load" :disabled="loading">載入</button>
+        <button class="ghost" @click="load" :disabled="loading">重新整理</button>
       </div>
     </div>
 

@@ -36,8 +36,6 @@ function onSubmit() {
         end: form.end,
         note: form.note.trim(),
     })
-    form.start = ''
-    form.end = ''
     form.note = ''
     customCategory.value = ''
 }

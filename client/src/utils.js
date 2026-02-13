@@ -1,7 +1,7 @@
 export function fmtTime(dt) {
   if (!dt) return '\u2014'
   const d = new Date(dt)
-  return new Intl.DateTimeFormat('zh-Hant', { hour: '2-digit', minute: '2-digit' }).format(d)
+  return new Intl.DateTimeFormat('zh-Hant', { hour: '2-digit', minute: '2-digit', hour12: false }).format(d)
 }
 
 export function mins(m) {
@@ -22,6 +22,19 @@ export function fmtDate(dateStr) {
 export function fmtTimeStr(timeStr) {
   if (!timeStr) return '\u2014'
   return timeStr.substring(0, 5)
+}
+
+export function durationBetween(startStr, endStr) {
+  if (!startStr || !endStr) return ''
+  const [sh, sm] = startStr.split(':').map(Number)
+  const [eh, em] = endStr.split(':').map(Number)
+  const diff = (eh * 60 + em) - (sh * 60 + sm)
+  if (diff <= 0) return ''
+  const h = Math.floor(diff / 60)
+  const m = diff % 60
+  if (h > 0 && m > 0) return `${h}h${m}m`
+  if (h > 0) return `${h}h`
+  return `${m}m`
 }
 
 const categoryMap = {
