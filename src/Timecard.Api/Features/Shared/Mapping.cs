@@ -1,15 +1,16 @@
-using Timecard.Api.Data.Entities;
 using Timecard.Api.Domain;
+using Timecard.Api.Domain.Entities;
+using Timecard.Api.Domain.Services;
 
 namespace Timecard.Api.Features.Shared;
 
 public static class Mapping
 {
-    public static DayDto ToDayDto(DateOnly date, WorkDay? day)
+    public static DayDto ToDayDto(DateOnly date, WorkDay? day, ResolvedCalendarDay calendarDay)
     {
         var exists = day is not null;
-        var isNonWorking = day?.IsNonWorkingDay ?? false;
-        var note = day?.Note ?? "";
+        var isNonWorking = !calendarDay.IsWorking;
+        var note = calendarDay.Note;
 
         var planned = isNonWorking ? 0 : WorkRules.PlannedMinutesPerWorkDay;
 
@@ -24,6 +25,8 @@ public static class Mapping
         Exists: exists,
         IsNonWorkingDay: isNonWorking,
         Note: note,
+        CalendarKind: calendarDay.Kind,
+        CalendarSource: calendarDay.Source,
         Start: start,
         End: end,
         PunchCount: punches.Count,
@@ -32,7 +35,7 @@ public static class Mapping
         ExtensionMinutes: computed.CreditedMinutes,
         EffectiveMinutes: computed.EffectiveMinutes,
         DeltaMinutes: computed.DeltaMinutes,
-        FlexCandidate: computed.FlexCandidate,
+        FlexDeltaMinutes: computed.FlexDeltaMinutes,
         Punches: punches.Select(p => new PunchDto(p.Id, p.At, p.Note)).ToList(),
         AttendanceRequests: day?.AttendanceRequests
             .OrderBy(a => a.Start)
@@ -41,6 +44,6 @@ public static class Mapping
         );
     }
 
-    public static DayDto ToDayDto(WorkDay day)
-        => ToDayDto(day.Date, day);
+    public static DayDto ToDayDto(WorkDay day, ResolvedCalendarDay calendarDay)
+        => ToDayDto(day.Date, day, calendarDay);
 }

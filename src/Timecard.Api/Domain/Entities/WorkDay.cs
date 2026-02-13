@@ -1,4 +1,7 @@
-namespace Timecard.Api.Data.Entities;
+using Timecard.Api.Domain.Result;
+using Timecard.Api.Infrastructure.Data;
+
+namespace Timecard.Api.Domain.Entities;
 
 public sealed class WorkDay
 {
@@ -17,17 +20,8 @@ public sealed class WorkDay
     public int Id { get; private set; }
     public DateOnly Date { get; private set; }
 
-    public bool IsNonWorkingDay { get; private set; }
-    public string Note { get; private set; } = "";
-
     public IReadOnlyList<PunchEvent> Punches => _punches;
     public IReadOnlyList<AttendanceRequest> AttendanceRequests => _attendanceRequests;
-
-    public void SetNonWorking(bool isNonWorkingDay, string? note)
-    {
-        IsNonWorkingDay = isNonWorkingDay;
-        Note = note?.Trim() ?? "";
-    }
 
     public DomainResult<PunchEvent> AddPunch(DateTimeOffset at, string? note, TimeSpan minInterval, bool force)
     {
