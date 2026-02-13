@@ -175,3 +175,35 @@ select {
   font-style: italic;
   margin-top: 2px;
 }
+
+/* month report: future rows */
+tr.future td {
+  opacity: 0.45;
+  font-style: italic;
+}
+
+/* month report: stat cards */
+.month-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.month-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f9fafb;
+}
+.month-stat-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+.month-stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
