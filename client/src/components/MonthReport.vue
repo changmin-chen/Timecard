@@ -25,7 +25,7 @@ function load() {
 }
 
 function monthSummary(m) {
-  return `${m.year} 年 ${m.month} 月 ｜ 彈性餘額：${mins(m.flexBankEnd)} ｜ 共 ${m.days.length} 天`
+  return `${m.year} 年 ${m.month} 月 ｜ 彈性餘額：${mins(m.flexBankBalance)} ｜ 共 ${m.days.length} 天`
 }
 
 function deltaCls(d) {
@@ -85,9 +85,9 @@ function deficitCls(d) {
             <td class="mono">{{ mins(d.extensionMinutes) }}</td>
             <td class="mono">{{ d.effectiveMinutes }}</td>
             <td class="mono" :class="deltaCls(d.deltaMinutes)">{{ mins(d.deltaMinutes) }}</td>
-            <td class="mono">{{ mins(d.flexCandidate) }}</td>
-            <td class="mono">{{ mins(d.flexApplied) }}</td>
-            <td class="mono">{{ d.flexBankEnd }}</td>
+            <td class="mono">{{ mins(d.flexDeltaMinutes) }}</td>
+            <td class="mono">{{ mins(d.flexUsedMinutes) }}</td>
+            <td class="mono">{{ d.flexBankBalance }}</td>
             <td class="mono" :class="deficitCls(d.deficitMinutes)">{{ d.deficitMinutes ? d.deficitMinutes : '' }}</td>
             <td>{{ d.note || '' }}</td>
           </tr>

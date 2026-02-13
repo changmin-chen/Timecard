@@ -1,4 +1,4 @@
-using Timecard.Api.Data.Entities;
+using Timecard.Api.Domain.Entities;
 using Xunit;
 
 namespace Timecard.Tests;

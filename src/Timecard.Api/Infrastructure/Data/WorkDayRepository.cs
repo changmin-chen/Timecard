@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using Timecard.Api.Data.Entities;
+using Timecard.Api.Domain.Entities;
 
-namespace Timecard.Api.Data;
+namespace Timecard.Api.Infrastructure.Data;
 
 public sealed class WorkDayRepository(TimecardDb db)
 {

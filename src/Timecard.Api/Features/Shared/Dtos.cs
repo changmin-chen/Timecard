@@ -8,6 +8,8 @@ public sealed record DayDto(
     bool Exists,
     bool IsNonWorkingDay,
     string Note,
+    string CalendarKind,
+    string CalendarSource,
 
     DateTimeOffset? Start, // derived: earliest punch
     DateTimeOffset? End,   // derived: latest punch (if >=2 punches)
@@ -18,7 +20,7 @@ public sealed record DayDto(
     int ExtensionMinutes,
     int EffectiveMinutes,
     int DeltaMinutes,
-    int FlexCandidate,
+    int FlexDeltaMinutes,
 
     IReadOnlyList<PunchDto> Punches,
     IReadOnlyList<AttendanceRequestDto> AttendanceRequests
@@ -29,6 +31,8 @@ public sealed record MonthDayDto(
     bool Exists,
     bool IsNonWorkingDay,
     string Note,
+    string CalendarKind,
+    string CalendarSource,
 
     int PunchCount,
 
@@ -37,16 +41,16 @@ public sealed record MonthDayDto(
     int ExtensionMinutes,
     int EffectiveMinutes,
     int DeltaMinutes,
-    int FlexCandidate,
+    int FlexDeltaMinutes,
 
-    int FlexApplied,
-    int FlexBankEnd,
+    int FlexUsedMinutes,
+    int FlexBankBalance,
     int DeficitMinutes
 );
 
 public sealed record MonthDto(
     int Year,
     int Month,
-    int FlexBankEnd,
+    int FlexBankBalance,
     IReadOnlyList<MonthDayDto> Days
 );
