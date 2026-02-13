@@ -1,6 +1,6 @@
-using Timecard.Api.Domain.Constants;
 using Timecard.Api.Domain.Result;
-using Timecard.Api.Domain.Services;
+using Timecard.Api.Features.Calendar;
+using Timecard.Api.Features.Days;
 using Timecard.Api.Features.Shared;
 using Timecard.Api.Infrastructure.Data;
 
@@ -9,7 +9,7 @@ namespace Timecard.Api.Features.Punch;
 public static class PunchEndpoints
 {
     private static readonly TimeSpan MinInterval = TimeSpan.FromSeconds(30);
-    private const string CalendarId = WorkCalendarConstants.TaiwanDgpaCalendarId;
+    private const string CalendarId = CalendarConstants.TaiwanDgpaCalendarId;
 
     public static IEndpointRouteBuilder MapPunchEndpoints(this IEndpointRouteBuilder app)
     {
@@ -47,7 +47,7 @@ public static class PunchEndpoints
         if (!result.IsSuccess) return result.Error!.ToProblem(http);
 
         await repo.SaveChangesAsync(ct);
-        return Results.Ok(Mapping.ToDayDto(day, calendarDay));
+        return Results.Ok(DayMapping.ToDayDto(day, calendarDay));
     }
 
     private static async Task<IResult> DeletePunch(WorkDayRepository repo, IWorkCalendar calendar, int id, HttpContext http, CancellationToken ct)
@@ -69,7 +69,7 @@ public static class PunchEndpoints
         if (!result.IsSuccess) return result.Error!.ToProblem(http);
 
         await repo.SaveChangesAsync(ct);
-        return Results.Ok(Mapping.ToDayDto(day, calendarDay));
+        return Results.Ok(DayMapping.ToDayDto(day, calendarDay));
     }
 
     private static async Task<IResult> GetStatus(WorkDayRepository repo, string? date, CancellationToken ct)

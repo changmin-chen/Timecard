@@ -5,7 +5,7 @@ using CsvHelper.Configuration.Attributes;
 using Timecard.Api.Domain.Entities;
 using Timecard.Api.Infrastructure.Data;
 
-namespace Timecard.Api.Domain.Services;
+namespace Timecard.Api.Features.Calendar;
 
 /// <summary>
 /// Provides functionality to import calendar data from a CSV file into the calendar database.
@@ -78,12 +78,12 @@ public sealed class DgpaCalendarImporter(TimecardDb db)
     {
         raw = raw.Trim();
 
-        // 明確格式 (西曆)
+        // Explicit Gregorian formats.
         if (DateOnly.TryParseExact(raw, DateFormats,
             CultureInfo.InvariantCulture, DateTimeStyles.None, out date))
             return true;
 
-        // Fallback: TaiwanCulture 處理民國年
+        // Fallback: TaiwanCulture handles Minguo dates.
         if (DateOnly.TryParse(raw, TaiwanCulture, DateTimeStyles.None, out date))
             return true;
 
@@ -122,3 +122,4 @@ public sealed record CalendarImportResult(
     int UpdatedRows,
     DateTimeOffset ImportedAtUtc
 );
+

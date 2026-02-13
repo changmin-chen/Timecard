@@ -1,16 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using CsvHelper;
-using Timecard.Api.Domain.Constants;
 using Timecard.Api.Domain.Entities;
-using Timecard.Api.Domain.Services;
 using Timecard.Api.Infrastructure.Data;
 
 namespace Timecard.Api.Features.Calendar;
 
 public static class CalendarEndpoints
 {
-    private const string DefaultCalendarId = WorkCalendarConstants.TaiwanDgpaCalendarId;
+    private const string DefaultCalendarId = CalendarConstants.TaiwanDgpaCalendarId;
 
     public static IEndpointRouteBuilder MapCalendarEndpoints(this IEndpointRouteBuilder app)
     {

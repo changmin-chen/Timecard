@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Domain.Entities;
 using Timecard.Api.Infrastructure.Data;
 
-namespace Timecard.Api.Domain.Services;
+namespace Timecard.Api.Features.Calendar;
 
 public sealed class EfWorkCalendar(TimecardDb db) : IWorkCalendar
 {
@@ -114,3 +114,4 @@ public sealed class EfWorkCalendar(TimecardDb db) : IWorkCalendar
         );
     }
 }
+

@@ -1,4 +1,4 @@
-namespace Timecard.Api.Features.Shared;
+namespace Timecard.Api.Features.Days;
 
 public sealed record PunchDto(int Id, DateTimeOffset At, string Note);
 public sealed record AttendanceRequestDto(int Id, string Category, string Start, string End, string Note);
@@ -26,31 +26,3 @@ public sealed record DayDto(
     IReadOnlyList<AttendanceRequestDto> AttendanceRequests
 );
 
-public sealed record MonthDayDto(
-    string Date,
-    bool Exists,
-    bool IsNonWorkingDay,
-    string Note,
-    string CalendarKind,
-    string CalendarSource,
-
-    int PunchCount,
-
-    int PlannedMinutes,
-    int WorkedMinutes,
-    int ExtensionMinutes,
-    int EffectiveMinutes,
-    int DeltaMinutes,
-    int FlexDeltaMinutes,
-
-    int FlexUsedMinutes,
-    int FlexBankBalance,
-    int DeficitMinutes
-);
-
-public sealed record MonthDto(
-    int Year,
-    int Month,
-    int FlexBankBalance,
-    IReadOnlyList<MonthDayDto> Days
-);

@@ -1,10 +1,10 @@
 using Timecard.Api.Domain;
 using Timecard.Api.Domain.Entities;
-using Timecard.Api.Domain.Services;
+using Timecard.Api.Features.Calendar;
 
-namespace Timecard.Api.Features.Shared;
+namespace Timecard.Api.Features.Days;
 
-public static class Mapping
+public static class DayMapping
 {
     public static DayDto ToDayDto(DateOnly date, WorkDay? day, ResolvedCalendarDay calendarDay)
     {
@@ -47,3 +47,4 @@ public static class Mapping
     public static DayDto ToDayDto(WorkDay day, ResolvedCalendarDay calendarDay)
         => ToDayDto(day.Date, day, calendarDay);
 }
+
