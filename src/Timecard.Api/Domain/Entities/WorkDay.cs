@@ -1,4 +1,7 @@
-namespace Timecard.Api.Data.Entities;
+using Timecard.Api.Domain.Result;
+using Timecard.Api.Infrastructure.Data;
+
+namespace Timecard.Api.Domain.Entities;
 
 public sealed class WorkDay
 {

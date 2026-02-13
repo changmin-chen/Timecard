@@ -1,4 +1,4 @@
-namespace Timecard.Api.Constants;
+namespace Timecard.Api.Domain.Constants;
 
 public static class WorkCalendarConstants
 {

@@ -1,4 +1,4 @@
-namespace Timecard.Api.Services;
+namespace Timecard.Api.Domain.Services;
 
 
 public interface IWorkCalendar

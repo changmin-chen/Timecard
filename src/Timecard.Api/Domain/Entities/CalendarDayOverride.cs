@@ -1,4 +1,4 @@
-namespace Timecard.Api.Data.Entities;
+namespace Timecard.Api.Domain.Entities;
 
 public sealed class CalendarDayOverride
 {

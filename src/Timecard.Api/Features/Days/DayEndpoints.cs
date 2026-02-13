@@ -1,7 +1,7 @@
-using Timecard.Api.Constants;
-using Timecard.Api.Data;
+using Timecard.Api.Domain.Constants;
+using Timecard.Api.Domain.Services;
 using Timecard.Api.Features.Shared;
-using Timecard.Api.Services;
+using Timecard.Api.Infrastructure.Data;
 
 namespace Timecard.Api.Features.Days;
 

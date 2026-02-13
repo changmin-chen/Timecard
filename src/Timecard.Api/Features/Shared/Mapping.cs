@@ -1,7 +1,6 @@
-using Timecard.Api.Data.Entities;
 using Timecard.Api.Domain;
-using Timecard.Api.Data;
-using Timecard.Api.Services;
+using Timecard.Api.Domain.Entities;
+using Timecard.Api.Domain.Services;
 
 namespace Timecard.Api.Features.Shared;
 

@@ -1,4 +1,4 @@
-﻿namespace Timecard.Api.Data;
+﻿namespace Timecard.Api.Domain.Result;
 
 public sealed record DomainError(string Message);
 

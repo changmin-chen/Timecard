@@ -2,10 +2,10 @@ using System.Globalization;
 using System.Text;
 using CsvHelper;
 using CsvHelper.Configuration.Attributes;
-using Timecard.Api.Data;
-using Timecard.Api.Data.Entities;
+using Timecard.Api.Domain.Entities;
+using Timecard.Api.Infrastructure.Data;
 
-namespace Timecard.Api.Services;
+namespace Timecard.Api.Domain.Services;
 
 /// <summary>
 /// Provides functionality to import calendar data from a CSV file into the calendar database.

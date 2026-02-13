@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using Timecard.Api.Data;
-using Timecard.Api.Data.Entities;
+using Timecard.Api.Domain.Entities;
+using Timecard.Api.Infrastructure.Data;
 
-namespace Timecard.Api.Services;
+namespace Timecard.Api.Domain.Services;
 
 public sealed class EfWorkCalendar(TimecardDb db) : IWorkCalendar
 {

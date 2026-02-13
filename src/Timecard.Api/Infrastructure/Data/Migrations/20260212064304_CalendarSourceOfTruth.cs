@@ -1,9 +1,8 @@
-﻿using System;
+﻿#nullable disable
+
 using Microsoft.EntityFrameworkCore.Migrations;
 
-#nullable disable
-
-namespace Timecard.Api.Data.Migrations
+namespace Timecard.Api.Infrastructure.Data.Migrations
 {
     /// <inheritdoc />
     public partial class CalendarSourceOfTruth : Migration
