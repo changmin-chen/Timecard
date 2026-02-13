@@ -1,5 +1,4 @@
-namespace Timecard.Api.Domain.Services;
-
+namespace Timecard.Api.Features.Calendar;
 
 public interface IWorkCalendar
 {
@@ -19,3 +18,4 @@ public sealed record ResolvedCalendarDay(
     string Source,
     DateTimeOffset VersionImportedAt
 );
+

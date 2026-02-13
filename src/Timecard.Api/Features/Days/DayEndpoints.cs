@@ -1,13 +1,11 @@
-using Timecard.Api.Domain.Constants;
-using Timecard.Api.Domain.Services;
-using Timecard.Api.Features.Shared;
+using Timecard.Api.Features.Calendar;
 using Timecard.Api.Infrastructure.Data;
 
 namespace Timecard.Api.Features.Days;
 
 public static class DayEndpoints
 {
-    private const string CalendarId = WorkCalendarConstants.TaiwanDgpaCalendarId;
+    private const string CalendarId = CalendarConstants.TaiwanDgpaCalendarId;
 
     public static IEndpointRouteBuilder MapDayEndpoints(this IEndpointRouteBuilder app)
     {
@@ -27,7 +25,7 @@ public static class DayEndpoints
         try
         {
             var calendarDay = await calendar.GetRequiredDayAsync(CalendarId, date, ct);
-            return Results.Ok(Mapping.ToDayDto(date, day, calendarDay));
+            return Results.Ok(DayMapping.ToDayDto(date, day, calendarDay));
         }
         catch (InvalidOperationException ex)
         {
@@ -45,7 +43,7 @@ public static class DayEndpoints
         try
         {
             var calendarDay = await calendar.GetRequiredDayAsync(CalendarId, d, ct);
-            return Results.Ok(Mapping.ToDayDto(d, day, calendarDay));
+            return Results.Ok(DayMapping.ToDayDto(d, day, calendarDay));
         }
         catch (InvalidOperationException ex)
         {

@@ -1,15 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Domain;
-using Timecard.Api.Domain.Constants;
-using Timecard.Api.Domain.Services;
-using Timecard.Api.Features.Shared;
+using Timecard.Api.Features.Calendar;
 using Timecard.Api.Infrastructure.Data;
 
 namespace Timecard.Api.Features.Month;
 
 public static class MonthEndpoints
 {
-    private const string CalendarId = WorkCalendarConstants.TaiwanDgpaCalendarId;
+    private const string CalendarId = CalendarConstants.TaiwanDgpaCalendarId;
 
     public static IEndpointRouteBuilder MapMonthEndpoints(this IEndpointRouteBuilder app)
     {
