@@ -12,7 +12,7 @@ export function useDay() {
     try {
       await fn()
     } catch (err) {
-      toast.error(err.message)
+      toast.errorFrom(err)
     } finally {
       loading.value = false
     }

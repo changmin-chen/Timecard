@@ -24,7 +24,7 @@ public static class AttendanceRequestEndpoints
     public sealed record AttendanceRequestCreate(string Date, string Category, string Start, string End, string? Note);
     public sealed record AttendanceRequestUpdate(string Category, string Start, string End, string? Note);
 
-    private static async Task<IResult> Create(WorkDayRepository repo, IWorkCalendar calendar, AttendanceRequestCreate req, CancellationToken ct)
+    private static async Task<IResult> Create(WorkDayRepository repo, IWorkCalendar calendar, AttendanceRequestCreate req, HttpContext http, CancellationToken ct)
     {
         if (!DateOnly.TryParse(req.Date, out var d))
             return Results.BadRequest(new { error = "Invalid date. Use yyyy-MM-dd." });
@@ -48,13 +48,13 @@ public static class AttendanceRequestEndpoints
         var day = await repo.GetOrCreateDay(d, ct);
 
         var result = day.AddAttendanceRequest(req.Category, start, end, req.Note);
-        if (result.ToErrorResult() is { } err) return err;
+        if (!result.IsSuccess) return result.Error!.ToProblem(http);
 
         await repo.SaveChangesAsync(ct);
         return Results.Ok(Mapping.ToDayDto(day, calendarDay));
     }
 
-    private static async Task<IResult> Update(WorkDayRepository repo, IWorkCalendar calendar, int id, AttendanceRequestUpdate req, CancellationToken ct)
+    private static async Task<IResult> Update(WorkDayRepository repo, IWorkCalendar calendar, int id, AttendanceRequestUpdate req, HttpContext http, CancellationToken ct)
     {
         if (!TimeOnly.TryParse(req.Start, out var start))
             return Results.BadRequest(new { error = "Invalid start time. Use HH:mm." });
@@ -76,13 +76,13 @@ public static class AttendanceRequestEndpoints
         }
 
         var result = day.UpdateAttendanceRequest(id, req.Category, start, end, req.Note);
-        if (result.ToErrorResult() is { } err) return err;
+        if (!result.IsSuccess) return result.Error!.ToProblem(http);
 
         await repo.SaveChangesAsync(ct);
         return Results.Ok(Mapping.ToDayDto(day, calendarDay));
     }
 
-    private static async Task<IResult> Delete(WorkDayRepository repo, IWorkCalendar calendar, int id, CancellationToken ct)
+    private static async Task<IResult> Delete(WorkDayRepository repo, IWorkCalendar calendar, int id, HttpContext http, CancellationToken ct)
     {
         var day = await repo.LoadByAttendanceRequestId(id, ct);
         if (day is null) return Results.NotFound();
@@ -98,7 +98,7 @@ public static class AttendanceRequestEndpoints
         }
 
         var result = day.RemoveAttendanceRequest(id);
-        if (result.ToErrorResult() is { } err) return err;
+        if (!result.IsSuccess) return result.Error!.ToProblem(http);
 
         await repo.SaveChangesAsync(ct);
         return Results.Ok(Mapping.ToDayDto(day, calendarDay));

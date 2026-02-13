@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Domain.Services;
@@ -26,6 +27,14 @@ builder.Services.AddDbContext<TimecardDb>(opt =>
 builder.Services.AddScoped<WorkDayRepository>();
 builder.Services.AddScoped<IWorkCalendar, EfWorkCalendar>();
 builder.Services.AddScoped<DgpaCalendarImporter>();
+builder.Services.AddProblemDetails(options =>
+{
+    options.CustomizeProblemDetails = ctx =>
+    {
+        ctx.ProblemDetails.Extensions["traceId"] =
+            Activity.Current?.Id ?? ctx.HttpContext.TraceIdentifier;
+    };
+});
 
 var app = builder.Build();
 
@@ -35,6 +44,8 @@ var app = builder.Build();
     db.Database.Migrate();
 }
 
+app.UseExceptionHandler();
+app.UseStatusCodePages();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
