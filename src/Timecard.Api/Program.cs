@@ -26,6 +26,9 @@ builder.Services.AddDbContext<TimecardDb>(opt =>
 builder.Services.AddScoped<WorkDayRepository>();
 builder.Services.AddScoped<IWorkCalendar, EfWorkCalendar>();
 builder.Services.AddScoped<DgpaCalendarImporter>();
+builder.Services.AddScoped<DgpaCalendarSeeder>();
+builder.Services.Configure<DgpaCalendarSeedOptions>(
+    builder.Configuration.GetSection("CalendarSeed:Dgpa"));
 builder.Services.AddProblemDetails(options =>
 {
     options.CustomizeProblemDetails = ctx =>
@@ -38,9 +41,12 @@ builder.Services.AddProblemDetails(options =>
 var app = builder.Build();
 
 {
-    using var scope = app.Services.CreateScope();
+    await using var scope = app.Services.CreateAsyncScope();
     var db = scope.ServiceProvider.GetRequiredService<TimecardDb>();
-    db.Database.Migrate();
+    var seeder = scope.ServiceProvider.GetRequiredService<DgpaCalendarSeeder>();
+
+    await db.Database.MigrateAsync();
+    await seeder.SeedAsync();
 }
 
 app.UseExceptionHandler();
