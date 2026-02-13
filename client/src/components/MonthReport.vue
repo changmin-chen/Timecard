@@ -25,7 +25,10 @@ function load() {
 }
 
 function monthSummary(m) {
-  return `${m.year} 年 ${m.month} 月 ｜ 彈性餘額：${mins(m.flexBankBalance)} ｜ 共 ${m.days.length} 天`
+  const parts = [`${m.year} 年 ${m.month} 月`, `彈性餘額：${mins(m.flexBankBalance)}`]
+  if (m.totalDeficitMinutes > 0) parts.push(`累計不足：${mins(m.totalDeficitMinutes)}`)
+  parts.push(`共 ${m.days.length} 天`)
+  return parts.join(' ｜ ')
 }
 
 function deltaCls(d) {

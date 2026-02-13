@@ -8,7 +8,7 @@ namespace Timecard.Api.Domain;
 /// <param name="CreditedMinutes">出勤申請（請假／出差等）額外認列的分鐘數。</param>
 /// <param name="EffectiveMinutes">WorkedMinutes + CreditedMinutes。</param>
 /// <param name="DeltaMinutes">EffectiveMinutes − PlannedMinutes（正值＝多做、負值＝不足）。</param>
-/// <param name="FlexDeltaMinutes">Clamp(Delta, ±55) 後可存入／提領彈性銀行的分鐘數；免上班日固定為 0。</param>
+/// <param name="FlexDeltaMinutes">累積上限 +55、消耗不限；可存入（正）／提領（負）彈性銀行的分鐘數；免上班日固定為 0。</param>
 public sealed record DailyWorkSummary(
     int PlannedMinutes,
     int WorkedMinutes,

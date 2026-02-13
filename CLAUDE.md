@@ -50,3 +50,28 @@ cd client && npm run build                                    # Build to src/Tim
 - **Commit messages**: Concise imperative with tag prefix: `[add]`, `[refactor]`, `[remove]`, `[replace]`, `[rev]`
 - **Encoding**: All files UTF-8. In PowerShell, always specify encoding explicitly — never bare `Set-Content`/`Out-File`. Use `[System.IO.File]::WriteAllText(path, content, [System.Text.UTF8Encoding]::new($false))` for CJK text
 - **C#**: Nullable reference types enabled, implicit usings, latest language version. Records for DTOs and computed results
+
+
+## Skills
+
+### frontend-design
+**Read `.claude/skills/frontend-design/SKILL.md` before starting** whenever the task involves:
+- Building or modifying any frontend interface, webpage, or UI component
+- Creating React components, HTML/CSS layouts, or styling
+- Building landing pages, dashboards, or full websites
+- Designing posters, visual pages, or any visually-oriented output
+- Beautifying or restyling an existing interface
+
+> Goal: Deliver production-grade, visually distinctive interfaces — avoid generic, template-like AI aesthetics.
+
+---
+
+### webapp-testing
+**Read `.claude/skills/webapp-testing/SKILL.md` before starting** whenever the task involves:
+- Testing or verifying functionality of a local web application
+- Debugging UI behavior or inspecting frontend interactions
+- Capturing browser screenshots to validate visual output
+- Viewing or analyzing browser console logs
+- Any Playwright-based interaction with a running web app
+
+> Goal: Use the correct Playwright toolkit and testing approach to reliably verify and debug frontend behavior.
