@@ -1,4 +1,4 @@
-namespace Timecard.Api.Domain.Result;
+namespace Timecard.Api.Domain.Results;
 
 public static class Errors
 {

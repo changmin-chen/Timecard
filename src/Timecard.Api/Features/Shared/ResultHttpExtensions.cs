@@ -1,5 +1,5 @@
-using System.Diagnostics;
-using Timecard.Api.Domain.Result;
+﻿using System.Diagnostics;
+using Timecard.Api.Domain.Results;
 
 namespace Timecard.Api.Features.Shared;
 
