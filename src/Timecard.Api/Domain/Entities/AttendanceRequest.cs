@@ -1,17 +1,12 @@
+using Timecard.Api.Domain.Results;
+using Timecard.Api.Infrastructure.Data;
+
 namespace Timecard.Api.Domain.Entities;
 
 public sealed class AttendanceRequest
 {
     private AttendanceRequest()
     {
-    }
-
-    internal AttendanceRequest(string category, TimeOnly start, TimeOnly end, string? note)
-    {
-        Category = category.Trim();
-        Start = start;
-        End = end;
-        Note = note?.Trim() ?? "";
     }
 
     public int Id { get; private set; }
@@ -22,11 +17,41 @@ public sealed class AttendanceRequest
     public TimeOnly End { get; private set; }
     public string Note { get; private set; } = "";
 
-    internal void Update(string category, TimeOnly start, TimeOnly end, string? note)
+    internal static Result<AttendanceRequest> Create(string category, TimeOnly start, TimeOnly end, string? note)
     {
+        var validation = Validate(category, start, end);
+        if (!validation.IsSuccess) return Result<AttendanceRequest>.Fail(validation.Error!);
+
+        var request = new AttendanceRequest
+        {
+            Category = category.Trim(),
+            Start = start,
+            End = end,
+            Note = note?.Trim() ?? ""
+        };
+        return Result<AttendanceRequest>.Ok(request);
+    }
+
+    internal Result Update(string category, TimeOnly start, TimeOnly end, string? note)
+    {
+        var validation = Validate(category, start, end);
+        if (!validation.IsSuccess) return validation;
+
         Category = category.Trim();
         Start = start;
         End = end;
         Note = note?.Trim() ?? "";
+        return Result.Ok();
+    }
+
+    private static Result Validate(string category, TimeOnly start, TimeOnly end)
+    {
+        if (string.IsNullOrWhiteSpace(category))
+            return Result.Fail(Errors.WorkDay.CategoryRequired);
+
+        if (start >= end)
+            return Result.Fail(Errors.WorkDay.StartBeforeEnd);
+
+        return Result.Ok();
     }
 }

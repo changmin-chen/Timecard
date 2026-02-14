@@ -49,11 +49,8 @@ public sealed class WorkDay
 
     public Result<AttendanceRequest> AddAttendanceRequest(string category, TimeOnly start, TimeOnly end, string? note)
     {
-        if (string.IsNullOrWhiteSpace(category))
-            return Result<AttendanceRequest>.Fail(Errors.WorkDay.CategoryRequired);
-
-        if (start >= end)
-            return Result<AttendanceRequest>.Fail(Errors.WorkDay.StartBeforeEnd);
+        var createResult = AttendanceRequest.Create(category, start, end, note);
+        if (!createResult.IsSuccess) return createResult;
 
         var overlapCheck = CheckOverlap(start, end, excludeId: null);
         if (!overlapCheck.IsSuccess) return Result<AttendanceRequest>.Fail(overlapCheck.Error!);
@@ -61,19 +58,12 @@ public sealed class WorkDay
         var gapCheck = CheckGaps(start, end, excludeId: null);
         if (!gapCheck.IsSuccess) return Result<AttendanceRequest>.Fail(gapCheck.Error!);
 
-        var request = new AttendanceRequest(category, start, end, note);
-        _attendanceRequests.Add(request);
-        return Result<AttendanceRequest>.Ok(request);
+        _attendanceRequests.Add(createResult.Value!);
+        return createResult;
     }
 
     public Result UpdateAttendanceRequest(int id, string category, TimeOnly start, TimeOnly end, string? note)
     {
-        if (string.IsNullOrWhiteSpace(category))
-            return Result.Fail(Errors.WorkDay.CategoryRequired);
-
-        if (start >= end)
-            return Result.Fail(Errors.WorkDay.StartBeforeEnd);
-
         var request = _attendanceRequests.FirstOrDefault(a => a.Id == id);
         if (request is null)
             return Result.Fail(Errors.WorkDay.AttendanceNotFound);
@@ -84,8 +74,7 @@ public sealed class WorkDay
         var gapCheck = CheckGaps(start, end, excludeId: id);
         if (!gapCheck.IsSuccess) return gapCheck;
 
-        request.Update(category, start, end, note);
-        return Result.Ok();
+        return request.Update(category, start, end, note);
     }
 
     public Result RemoveAttendanceRequest(int id)
