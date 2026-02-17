@@ -30,6 +30,35 @@ public readonly record struct TimeRange  // Value Object
     /// <summary>True when two ranges overlap or touch at endpoints.</summary>
     public bool OverlapsOrTouches(TimeRange other) =>
         Start <= other.End && other.Start <= End;
+    
+    /// <summary>
+    /// True when there is a gap between this range and <paramref name="other"/>
+    /// (i.e., they neither overlap nor touch).
+    /// </summary>
+    public bool HasGapBetween(TimeRange other) => !OverlapsOrTouches(other);
+    
+    
+    /// <summary>
+    /// Returns the gap <see cref="TimeRange"/> between this range and <paramref name="other"/>,
+    /// or <see langword="null"/> when no gap exists (they overlap or touch).
+    /// The returned range always spans from the earlier end-point to the later start-point,
+    /// regardless of which range comes first.
+    /// </summary>
+    /// <example>
+    /// [08:00~09:00].TryGetGap([10:00~11:00]) → TimeRange(09:00, 10:00)
+    /// [08:00~09:00].TryGetGap([09:00~10:00]) → null
+    /// </example>
+    public TimeRange? TryGetGap(TimeRange other)
+    {
+        // Determine the "gap window": earlier end → later start
+        TimeOnly gapStart = End < other.End ? End : other.End;     // min(End, other.End)
+        TimeOnly gapEnd   = Start > other.Start ? Start : other.Start; // max(Start, other.Start)
+
+        return gapEnd > gapStart
+            ? new TimeRange(gapStart, gapEnd)
+            : null;
+    }
+    
 
     public TimeSpan Duration => End - Start;
 

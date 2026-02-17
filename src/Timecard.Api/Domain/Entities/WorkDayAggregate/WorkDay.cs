@@ -44,14 +44,14 @@ public sealed class WorkDay : BaseEntity<int>
         _punches.Remove(punch);
         return Result.Ok();
     }
-    
+
 
     public Result<AttendanceRequest> AddAttendanceRequest(string category, TimeRange range, string? note)
     {
         var overlapCheck = ValidateNoOverlap(range, excludeId: null);
         if (!overlapCheck.IsSuccess) return Result<AttendanceRequest>.Fail(overlapCheck.Error!);
 
-        var gapCheck = ValidateRequestAgainstPunchSpan(range.Start, range.End, excludeId: null);
+        var gapCheck = ValidateRequestAgainstPunchSpan(range, excludeId: null);
         if (!gapCheck.IsSuccess) return Result<AttendanceRequest>.Fail(gapCheck.Error!);
 
         var newAttendance = new AttendanceRequest(category, range, note);
@@ -68,7 +68,7 @@ public sealed class WorkDay : BaseEntity<int>
         var overlapCheck = ValidateNoOverlap(range, excludeId: id);
         if (!overlapCheck.IsSuccess) return overlapCheck;
 
-        var gapCheck = ValidateRequestAgainstPunchSpan(range.Start, range.End, excludeId: id);
+        var gapCheck = ValidateRequestAgainstPunchSpan(range, excludeId: id);
         if (!gapCheck.IsSuccess) return gapCheck;
 
         request.Update(category, range, note);
@@ -135,7 +135,7 @@ public sealed class WorkDay : BaseEntity<int>
         // No punch span: entire effective range is extension
         return (int)totalSpan;
     }
-    
+
     private Result ValidateNoOverlap(TimeRange range, int? excludeId)
     {
         foreach (var existing in _attendanceRequests)
@@ -150,9 +150,9 @@ public sealed class WorkDay : BaseEntity<int>
         return Result.Ok();
     }
 
-    private Result ValidateRequestAgainstPunchSpan(TimeOnly newStart, TimeOnly newEnd, int? excludeId)
+    private Result ValidateRequestAgainstPunchSpan(TimeRange range, int? excludeId)
     {
-        var segments = new List<(TimeOnly Start, TimeOnly End)>();
+        var segments = new List<TimeRange> { range };
 
         // Add punch span if available
         var ordered = _punches.OrderBy(p => p.At).ToList();
@@ -160,30 +160,33 @@ public sealed class WorkDay : BaseEntity<int>
         {
             var ps = TimeOnly.FromDateTime(ordered[0].At.LocalDateTime);
             var pe = TimeOnly.FromDateTime(ordered[^1].At.LocalDateTime);
-            segments.Add((ps, pe));
+            segments.Add(new TimeRange(ps, pe));
         }
 
         // Add existing attendance requests (excluding the one being updated)
         foreach (var r in _attendanceRequests)
         {
             if (excludeId.HasValue && r.Id == excludeId.Value) continue;
-            segments.Add((r.Start, r.End));
+            segments.Add(new TimeRange(r.Start, r.End));
         }
-
-        // Add the new/updated request
-        segments.Add((newStart, newEnd));
 
         // If there's only one segment, no gaps possible
         if (segments.Count <= 1)
             return Result.Ok();
 
-        // Sort by start time and check for gaps
-        segments.Sort((a, b) => a.Start.CompareTo(b.Start));
+        // Sort by start time and ensure all segments form one connected timeline.
+        segments = segments.OrderBy(s => s.Start).ToList();
+
+        var merged = segments[0];
 
         for (int i = 1; i < segments.Count; i++)
         {
-            if (segments[i].Start > segments[i - 1].End)
-                return Result.Fail(Errors.WorkDay.Gap);
+            var current = segments[i];
+            if (merged.HasGapBetween(current))
+                return Result.Fail(Errors.WorkDay.HasGap);
+
+            if (current.End > merged.End)
+                merged = new TimeRange(merged.Start, current.End);
         }
 
         return Result.Ok();
