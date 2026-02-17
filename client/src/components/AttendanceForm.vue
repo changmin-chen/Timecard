@@ -93,24 +93,18 @@ function onSubmit() {
 <template>
     <h3>新增出勤申請</h3>
     <form class="form" @submit.prevent="onSubmit">
-        <div class="form-row">
-            <label>
-                日期
-                <input type="date" v-model="form.date" required/>
-            </label>
-            <div class="field">
-                <span class="field-label">類別</span>
-                <div class="category-pills">
-                    <button
-                        v-for="c in categories"
-                        :key="c.value"
-                        type="button"
-                        class="category-pill"
-                        :class="{selected: form.category === c.value}"
-                        :style="pillStyle(c)"
-                        @click="form.category = c.value"
-                    >{{ c.label }}</button>
-                </div>
+        <div class="field">
+            <span class="field-label">類別</span>
+            <div class="category-pills">
+                <button
+                    v-for="c in categories"
+                    :key="c.value"
+                    type="button"
+                    class="category-pill"
+                    :class="{selected: form.category === c.value}"
+                    :style="pillStyle(c)"
+                    @click="form.category = c.value"
+                >{{ c.label }}</button>
             </div>
         </div>
         <Transition name="fade">

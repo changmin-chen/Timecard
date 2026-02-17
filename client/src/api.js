@@ -1,12 +1,12 @@
 // api.js
 export class ApiError extends Error {
-    constructor(message, { status, statusText, body, code, problemDetails } = {}) {
+    constructor(message, { status, statusText, body, errorCode, problemDetails } = {}) {
         super(message);
         this.name = "ApiError";
         this.status = status ?? 0;
         this.statusText = statusText ?? "";
         this.body = body;
-        this.code = code ?? "";
+        this.errorCode = errorCode ?? "";
         this.problemDetails = problemDetails ?? null;
     }
 }
@@ -44,12 +44,12 @@ export function createApiClient({ baseUrl = "", fetchImpl = fetch } = {}) {
 
         if (!res.ok) {
             let msg = "Request failed";
-            let code = "";
+            let errorCode = "";
             let problemDetails = null;
 
             if (isJson && payload && typeof payload === "object") {
                 problemDetails = payload;
-                code = payload.extensions?.code || "";
+                errorCode = payload.errorCode;
                 msg =
                     payload.detail ||
                     payload.title ||
@@ -67,7 +67,7 @@ export function createApiClient({ baseUrl = "", fetchImpl = fetch } = {}) {
                 status: res.status,
                 statusText: res.statusText,
                 body: payload,
-                code,
+                errorCode,
                 problemDetails
             });
         }

@@ -6,6 +6,8 @@ const client = createApiClient({ baseUrl: "" });
 export const timecardApi = {
     getToday: () => client.request("/api/day/today"),
 
+    getDay: (date) => client.request(`/api/day/${date}`),
+
     punch: () => client.request("/api/punch", { method: "POST" }),
 
     deletePunch: (id) =>
