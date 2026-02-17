@@ -1,4 +1,5 @@
-﻿using Timecard.Api.Domain.Results;
+﻿using Timecard.Api.Domain.Entities.WorkDayAggregate;
+using Timecard.Api.Domain.Results;
 using Timecard.Api.Features.Calendar;
 using Timecard.Api.Features.Days;
 using Timecard.Api.Features.Shared;
@@ -47,7 +48,10 @@ public static class AttendanceRequestEndpoints
 
         var day = await repo.GetOrCreateDay(d, ct);
 
-        var result = day.AddAttendanceRequest(req.Category, start, end, req.Note);
+        var rangeResult = TimeRange.Create(start, end);
+        if (!rangeResult.IsSuccess) return rangeResult.Error!.ToProblem(http);
+
+        var result = day.AddAttendanceRequest(req.Category, rangeResult.Value!, req.Note);
         if (!result.IsSuccess) return result.Error!.ToProblem(http);
 
         await repo.SaveChangesAsync(ct);
@@ -75,7 +79,10 @@ public static class AttendanceRequestEndpoints
             return Results.Problem(title: "Calendar data missing", detail: ex.Message, statusCode: StatusCodes.Status409Conflict);
         }
 
-        var result = day.UpdateAttendanceRequest(id, req.Category, start, end, req.Note);
+        var rangeResult = TimeRange.Create(start, end);
+        if (!rangeResult.IsSuccess) return rangeResult.Error!.ToProblem(http);
+
+        var result = day.UpdateAttendanceRequest(id, req.Category, rangeResult.Value!, req.Note);
         if (!result.IsSuccess) return result.Error!.ToProblem(http);
 
         await repo.SaveChangesAsync(ct);

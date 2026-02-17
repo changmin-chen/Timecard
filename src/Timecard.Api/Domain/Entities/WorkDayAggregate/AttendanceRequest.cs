@@ -1,3 +1,4 @@
+using Ardalis.GuardClauses;
 using Timecard.Api.Domain.Results;
 
 namespace Timecard.Api.Domain.Entities.WorkDayAggregate;
@@ -15,38 +16,24 @@ public sealed class AttendanceRequest : BaseEntity<int>
     public TimeOnly End { get; private set; }
     public string Note { get; private set; } = "";
 
-    private AttendanceRequest(string category, TimeOnly start, TimeOnly end, string? note)
-        => (Category, Start, End, Note) = (category.Trim(), start, end, note?.Trim() ?? "");
-
-    internal static Result<AttendanceRequest> Create(string category, TimeOnly start, TimeOnly end, string? note)
+    public AttendanceRequest(string category, TimeRange range, string? note)
     {
-        var validation = Validate(category, start, end);
-        if (!validation.IsSuccess) return Result<AttendanceRequest>.Fail(validation.Error!);
-
-        var request = new AttendanceRequest(category, start, end, note);
-        return Result<AttendanceRequest>.Ok(request);
-    }
-
-    internal Result Update(string category, TimeOnly start, TimeOnly end, string? note)
-    {
-        var validation = Validate(category, start, end);
-        if (!validation.IsSuccess) return validation;
-
+        Guard.Against.NullOrWhiteSpace(category);
+        
         Category = category.Trim();
-        Start = start;
-        End = end;
+        Start = range.Start;
+        End = range.End;
         Note = note?.Trim() ?? "";
-        return Result.Ok();
     }
+    
 
-    private static Result Validate(string category, TimeOnly start, TimeOnly end)
+    public void Update(string category, TimeRange range, string? note)
     {
-        if (string.IsNullOrWhiteSpace(category))
-            return Result.Fail(Errors.WorkDay.CategoryRequired);
-
-        if (start >= end)
-            return Result.Fail(Errors.WorkDay.StartBeforeEnd);
-
-        return Result.Ok();
+        Guard.Against.NullOrWhiteSpace(category);
+        
+        Category = category.Trim();
+        Start = range.Start;
+        End = range.End;
+        Note = note?.Trim() ?? "";
     }
 }

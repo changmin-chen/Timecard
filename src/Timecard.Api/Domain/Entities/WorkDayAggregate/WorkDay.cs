@@ -18,8 +18,8 @@ public sealed class WorkDay : BaseEntity<int>
 
     public DateOnly Date { get; private set; }
 
-    public IReadOnlyList<PunchEvent> Punches => _punches;
-    public IReadOnlyList<AttendanceRequest> AttendanceRequests => _attendanceRequests;
+    public IReadOnlyCollection<PunchEvent> Punches => _punches.AsReadOnly();
+    public IReadOnlyCollection<AttendanceRequest> AttendanceRequests => _attendanceRequests.AsReadOnly();
 
     public Result<PunchEvent> AddPunch(DateTimeOffset at, string? note, TimeSpan minInterval, bool force)
     {
@@ -44,35 +44,35 @@ public sealed class WorkDay : BaseEntity<int>
         _punches.Remove(punch);
         return Result.Ok();
     }
+    
 
-    public Result<AttendanceRequest> AddAttendanceRequest(string category, TimeOnly start, TimeOnly end, string? note)
+    public Result<AttendanceRequest> AddAttendanceRequest(string category, TimeRange range, string? note)
     {
-        var createResult = AttendanceRequest.Create(category, start, end, note);
-        if (!createResult.IsSuccess) return createResult;
-
-        var overlapCheck = ValidateNoOverlap(start, end, excludeId: null);
+        var overlapCheck = ValidateNoOverlap(range, excludeId: null);
         if (!overlapCheck.IsSuccess) return Result<AttendanceRequest>.Fail(overlapCheck.Error!);
 
-        var gapCheck = ValidateRequestAgainstPunchSpan(start, end, excludeId: null);
+        var gapCheck = ValidateRequestAgainstPunchSpan(range.Start, range.End, excludeId: null);
         if (!gapCheck.IsSuccess) return Result<AttendanceRequest>.Fail(gapCheck.Error!);
 
-        _attendanceRequests.Add(createResult.Value!);
-        return createResult;
+        var newAttendance = new AttendanceRequest(category, range, note);
+        _attendanceRequests.Add(newAttendance);
+        return Result<AttendanceRequest>.Ok(newAttendance);
     }
 
-    public Result UpdateAttendanceRequest(int id, string category, TimeOnly start, TimeOnly end, string? note)
+    public Result UpdateAttendanceRequest(int id, string category, TimeRange range, string? note)
     {
         var request = _attendanceRequests.FirstOrDefault(a => a.Id == id);
         if (request is null)
             return Result.Fail(Errors.WorkDay.AttendanceNotFound);
 
-        var overlapCheck = ValidateNoOverlap(start, end, excludeId: id);
+        var overlapCheck = ValidateNoOverlap(range, excludeId: id);
         if (!overlapCheck.IsSuccess) return overlapCheck;
 
-        var gapCheck = ValidateRequestAgainstPunchSpan(start, end, excludeId: id);
+        var gapCheck = ValidateRequestAgainstPunchSpan(range.Start, range.End, excludeId: id);
         if (!gapCheck.IsSuccess) return gapCheck;
 
-        return request.Update(category, start, end, note);
+        request.Update(category, range, note);
+        return Result.Ok();
     }
 
     public Result RemoveAttendanceRequest(int id)
@@ -135,14 +135,15 @@ public sealed class WorkDay : BaseEntity<int>
         // No punch span: entire effective range is extension
         return (int)totalSpan;
     }
-
-    private Result ValidateNoOverlap(TimeOnly start, TimeOnly end, int? excludeId)
+    
+    private Result ValidateNoOverlap(TimeRange range, int? excludeId)
     {
         foreach (var existing in _attendanceRequests)
         {
             if (excludeId.HasValue && existing.Id == excludeId.Value) continue;
 
-            if (start < existing.End && end > existing.Start)
+            var existingRange = new TimeRange(existing.Start, existing.End);
+            if (range.Overlaps(existingRange))
                 return Result.Fail(Errors.WorkDay.Overlap);
         }
 

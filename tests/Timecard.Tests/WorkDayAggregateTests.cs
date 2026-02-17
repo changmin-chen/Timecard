@@ -1,4 +1,3 @@
-using Timecard.Api.Domain.Entities;
 using Timecard.Api.Domain.Entities.WorkDayAggregate;
 using Xunit;
 
@@ -60,7 +59,7 @@ public class WorkDayAggregateTests
         day.AddPunch(At(9, 0), "", TimeSpan.Zero, force: true);
         day.AddPunch(At(18, 0), "", TimeSpan.Zero, force: true);
 
-        var result = day.AddAttendanceRequest("Leave", new TimeOnly(18, 0), new TimeOnly(19, 0), "doctor");
+        var result = day.AddAttendanceRequest("Leave", new TimeRange(new TimeOnly(18, 0), new TimeOnly(19, 0)), "doctor");
 
         Assert.True(result.IsSuccess);
         Assert.Single(day.AttendanceRequests);
@@ -68,25 +67,31 @@ public class WorkDayAggregateTests
     }
 
     [Fact]
-    public void AddAttendanceRequest_StartAfterEnd_Fails()
+    public void TimeRange_StartAfterEnd_Throws()
     {
-        var day = CreateDay();
-
-        var result = day.AddAttendanceRequest("Leave", new TimeOnly(18, 0), new TimeOnly(9, 0), null);
-
-        Assert.False(result.IsSuccess);
-        Assert.Equal("Start must be before End.", result.Error!.Message);
+        Assert.Throws<ArgumentException>(() =>
+            new TimeRange(new TimeOnly(18, 0), new TimeOnly(9, 0)));
     }
 
     [Fact]
-    public void AddAttendanceRequest_EmptyCategory_Fails()
+    public void TimeRange_Create_StartAfterOrEqualEnd_Fails()
+    {
+        var startAfterEnd = TimeRange.Create(new TimeOnly(18, 0), new TimeOnly(9, 0));
+        var startEqualsEnd = TimeRange.Create(new TimeOnly(9, 0), new TimeOnly(9, 0));
+
+        Assert.False(startAfterEnd.IsSuccess);
+        Assert.False(startEqualsEnd.IsSuccess);
+        Assert.Equal("workday.start_before_end", startAfterEnd.Error!.Code);
+        Assert.Equal("workday.start_before_end", startEqualsEnd.Error!.Code);
+    }
+
+    [Fact]
+    public void AddAttendanceRequest_EmptyCategory_Throws()
     {
         var day = CreateDay();
 
-        var result = day.AddAttendanceRequest("", new TimeOnly(9, 0), new TimeOnly(10, 0), null);
-
-        Assert.False(result.IsSuccess);
-        Assert.Equal("Category is required.", result.Error!.Message);
+        Assert.Throws<ArgumentException>(() =>
+            day.AddAttendanceRequest("", new TimeRange(new TimeOnly(9, 0), new TimeOnly(10, 0)), null));
     }
 
     [Fact]
@@ -96,8 +101,8 @@ public class WorkDayAggregateTests
         day.AddPunch(At(9, 0), "", TimeSpan.Zero, force: true);
         day.AddPunch(At(18, 0), "", TimeSpan.Zero, force: true);
 
-        day.AddAttendanceRequest("Leave", new TimeOnly(18, 0), new TimeOnly(19, 0), null);
-        var result = day.AddAttendanceRequest("Trip", new TimeOnly(18, 30), new TimeOnly(20, 0), null);
+        day.AddAttendanceRequest("Leave", new TimeRange(new TimeOnly(18, 0), new TimeOnly(19, 0)), null);
+        var result = day.AddAttendanceRequest("Trip", new TimeRange(new TimeOnly(18, 30), new TimeOnly(20, 0)), null);
 
         Assert.False(result.IsSuccess);
         Assert.Equal("Attendance request overlaps with an existing one.", result.Error!.Message);
@@ -111,7 +116,7 @@ public class WorkDayAggregateTests
         day.AddPunch(At(18, 0), "", TimeSpan.Zero, force: true);
 
         // Gap between 18:00 and 19:00
-        var result = day.AddAttendanceRequest("Leave", new TimeOnly(19, 0), new TimeOnly(20, 0), null);
+        var result = day.AddAttendanceRequest("Leave", new TimeRange(new TimeOnly(19, 0), new TimeOnly(20, 0)), null);
 
         Assert.False(result.IsSuccess);
         Assert.Contains("gap", result.Error!.Message);
@@ -124,7 +129,7 @@ public class WorkDayAggregateTests
         day.AddPunch(At(9, 0), "", TimeSpan.Zero, force: true);
         day.AddPunch(At(18, 0), "", TimeSpan.Zero, force: true);
 
-        var result = day.AddAttendanceRequest("Leave", new TimeOnly(7, 0), new TimeOnly(9, 0), null);
+        var result = day.AddAttendanceRequest("Leave", new TimeRange(new TimeOnly(7, 0), new TimeOnly(9, 0)), null);
 
         Assert.True(result.IsSuccess);
     }
@@ -136,7 +141,7 @@ public class WorkDayAggregateTests
         day.AddPunch(At(9, 0), "", TimeSpan.Zero, force: true);
         day.AddPunch(At(18, 0), "", TimeSpan.Zero, force: true);
 
-        var result = day.AddAttendanceRequest("Leave", new TimeOnly(18, 0), new TimeOnly(20, 0), null);
+        var result = day.AddAttendanceRequest("Leave", new TimeRange(new TimeOnly(18, 0), new TimeOnly(20, 0)), null);
 
         Assert.True(result.IsSuccess);
     }
@@ -146,7 +151,7 @@ public class WorkDayAggregateTests
     {
         var day = CreateDay();
 
-        var result = day.AddAttendanceRequest("Holiday", new TimeOnly(9, 0), new TimeOnly(18, 0), "national holiday");
+        var result = day.AddAttendanceRequest("Holiday", new TimeRange(new TimeOnly(9, 0), new TimeOnly(18, 0)), "national holiday");
 
         Assert.True(result.IsSuccess);
     }
@@ -155,9 +160,9 @@ public class WorkDayAggregateTests
     public void AddAttendanceRequest_NoPunches_TwoContiguousRequests_Succeeds()
     {
         var day = CreateDay();
-        day.AddAttendanceRequest("Leave", new TimeOnly(9, 0), new TimeOnly(13, 0), null);
+        day.AddAttendanceRequest("Leave", new TimeRange(new TimeOnly(9, 0), new TimeOnly(13, 0)), null);
 
-        var result = day.AddAttendanceRequest("Trip", new TimeOnly(13, 0), new TimeOnly(18, 0), null);
+        var result = day.AddAttendanceRequest("Trip", new TimeRange(new TimeOnly(13, 0), new TimeOnly(18, 0)), null);
 
         Assert.True(result.IsSuccess);
     }
@@ -166,9 +171,9 @@ public class WorkDayAggregateTests
     public void AddAttendanceRequest_NoPunches_TwoNonContiguousRequests_Fails()
     {
         var day = CreateDay();
-        day.AddAttendanceRequest("Leave", new TimeOnly(9, 0), new TimeOnly(12, 0), null);
+        day.AddAttendanceRequest("Leave", new TimeRange(new TimeOnly(9, 0), new TimeOnly(12, 0)), null);
 
-        var result = day.AddAttendanceRequest("Trip", new TimeOnly(14, 0), new TimeOnly(18, 0), null);
+        var result = day.AddAttendanceRequest("Trip", new TimeRange(new TimeOnly(14, 0), new TimeOnly(18, 0)), null);
 
         Assert.False(result.IsSuccess);
         Assert.Contains("gap", result.Error!.Message);
@@ -200,7 +205,7 @@ public class WorkDayAggregateTests
         var day = CreateDay();
         day.AddPunch(At(9, 0), "", TimeSpan.Zero, force: true);
         day.AddPunch(At(18, 0), "", TimeSpan.Zero, force: true);
-        day.AddAttendanceRequest("Leave", new TimeOnly(7, 0), new TimeOnly(9, 0), null);
+        day.AddAttendanceRequest("Leave", new TimeRange(new TimeOnly(7, 0), new TimeOnly(9, 0)), null);
 
         // effectiveStart=7:00, effectiveEnd=18:00, totalSpan=660, punchSpan=540, extension=120
         Assert.Equal(120, day.CalculateExtensionMinutes());
@@ -212,7 +217,7 @@ public class WorkDayAggregateTests
         var day = CreateDay();
         day.AddPunch(At(9, 0), "", TimeSpan.Zero, force: true);
         day.AddPunch(At(18, 0), "", TimeSpan.Zero, force: true);
-        day.AddAttendanceRequest("Trip", new TimeOnly(18, 0), new TimeOnly(20, 0), null);
+        day.AddAttendanceRequest("Trip", new TimeRange(new TimeOnly(18, 0), new TimeOnly(20, 0)), null);
 
         // effectiveStart=9:00, effectiveEnd=20:00, totalSpan=660, punchSpan=540, extension=120
         Assert.Equal(120, day.CalculateExtensionMinutes());
@@ -224,8 +229,8 @@ public class WorkDayAggregateTests
         var day = CreateDay();
         day.AddPunch(At(9, 0), "", TimeSpan.Zero, force: true);
         day.AddPunch(At(18, 0), "", TimeSpan.Zero, force: true);
-        day.AddAttendanceRequest("Leave", new TimeOnly(7, 0), new TimeOnly(9, 0), null);
-        day.AddAttendanceRequest("Trip", new TimeOnly(18, 0), new TimeOnly(20, 0), null);
+        day.AddAttendanceRequest("Leave", new TimeRange(new TimeOnly(7, 0), new TimeOnly(9, 0)), null);
+        day.AddAttendanceRequest("Trip", new TimeRange(new TimeOnly(18, 0), new TimeOnly(20, 0)), null);
 
         // effectiveStart=7:00, effectiveEnd=20:00, totalSpan=780, punchSpan=540, extension=240
         Assert.Equal(240, day.CalculateExtensionMinutes());
@@ -235,7 +240,7 @@ public class WorkDayAggregateTests
     public void CalculateExtensionMinutes_NoPunches_OnlyRequests()
     {
         var day = CreateDay();
-        day.AddAttendanceRequest("Holiday", new TimeOnly(9, 0), new TimeOnly(18, 0), null);
+        day.AddAttendanceRequest("Holiday", new TimeRange(new TimeOnly(9, 0), new TimeOnly(18, 0)), null);
 
         // No punch span, entire range = 540 minutes
         Assert.Equal(540, day.CalculateExtensionMinutes());
@@ -247,7 +252,7 @@ public class WorkDayAggregateTests
         var day = CreateDay();
         day.AddPunch(At(9, 0), "", TimeSpan.Zero, force: true);
         // Only 1 punch => no punch span, but request exists
-        day.AddAttendanceRequest("Leave", new TimeOnly(9, 0), new TimeOnly(18, 0), null);
+        day.AddAttendanceRequest("Leave", new TimeRange(new TimeOnly(9, 0), new TimeOnly(18, 0)), null);
 
         // hasPunchSpan=false, hasRequests=true => extension = 540
         Assert.Equal(540, day.CalculateExtensionMinutes());
@@ -257,7 +262,7 @@ public class WorkDayAggregateTests
     public void RemoveAttendanceRequest_Succeeds()
     {
         var day = CreateDay();
-        day.AddAttendanceRequest("Leave", new TimeOnly(9, 0), new TimeOnly(18, 0), null);
+        day.AddAttendanceRequest("Leave", new TimeRange(new TimeOnly(9, 0), new TimeOnly(18, 0)), null);
 
         // Since Id is private set and defaults to 0 in-memory, we use 0
         var result = day.RemoveAttendanceRequest(0);
