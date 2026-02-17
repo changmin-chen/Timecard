@@ -67,6 +67,7 @@ onMounted(() => refreshToday())
       <div>
         <AttendanceForm
           :date="day?.date ?? ''"
+          :loading="loading"
           @submit="addAttendanceRequest"
         />
 

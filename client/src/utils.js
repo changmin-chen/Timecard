@@ -42,6 +42,8 @@ const categoryMap = {
   Trip: '出差',
   Holiday: '假日',
   Typhoon: '颱風假',
+  Overtime: '加班',
+  AnnualLeave: '特休',
 }
 
 export function categoryLabel(cat) {
@@ -49,6 +51,6 @@ export function categoryLabel(cat) {
 }
 
 export function categoryClass(cat) {
-  const map = { Leave: 'leave', Trip: 'trip', Holiday: 'holiday', Typhoon: 'typhoon' }
+  const map = { Leave: 'leave', Trip: 'trip', Holiday: 'holiday', Typhoon: 'typhoon', Overtime: 'overtime', AnnualLeave: 'annual' }
   return map[cat] || ''
 }

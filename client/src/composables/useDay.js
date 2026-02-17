@@ -43,6 +43,7 @@ export function useDay() {
     await withError(async () => {
       day.value = await timecardApi.addAttendanceRequest(payload)
       invalidateMonth()
+      toast.success('出勤申請已新增')
     })
   }
 
