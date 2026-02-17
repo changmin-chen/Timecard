@@ -17,18 +17,15 @@ public sealed class AttendanceRequest
     public TimeOnly End { get; private set; }
     public string Note { get; private set; } = "";
 
+    private AttendanceRequest(string category, TimeOnly start, TimeOnly end, string? note)
+        => (Category, Start, End, Note) = (category.Trim(), start, end, note?.Trim() ?? "");
+
     internal static Result<AttendanceRequest> Create(string category, TimeOnly start, TimeOnly end, string? note)
     {
         var validation = Validate(category, start, end);
         if (!validation.IsSuccess) return Result<AttendanceRequest>.Fail(validation.Error!);
 
-        var request = new AttendanceRequest
-        {
-            Category = category.Trim(),
-            Start = start,
-            End = end,
-            Note = note?.Trim() ?? ""
-        };
+        var request = new AttendanceRequest(category, start, end, note);
         return Result<AttendanceRequest>.Ok(request);
     }
 

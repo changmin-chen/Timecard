@@ -52,10 +52,10 @@ public sealed class WorkDay
         var createResult = AttendanceRequest.Create(category, start, end, note);
         if (!createResult.IsSuccess) return createResult;
 
-        var overlapCheck = CheckOverlap(start, end, excludeId: null);
+        var overlapCheck = ValidateNoOverlap(start, end, excludeId: null);
         if (!overlapCheck.IsSuccess) return Result<AttendanceRequest>.Fail(overlapCheck.Error!);
 
-        var gapCheck = CheckGaps(start, end, excludeId: null);
+        var gapCheck = ValidateRequestAgainstPunchSpan(start, end, excludeId: null);
         if (!gapCheck.IsSuccess) return Result<AttendanceRequest>.Fail(gapCheck.Error!);
 
         _attendanceRequests.Add(createResult.Value!);
@@ -68,10 +68,10 @@ public sealed class WorkDay
         if (request is null)
             return Result.Fail(Errors.WorkDay.AttendanceNotFound);
 
-        var overlapCheck = CheckOverlap(start, end, excludeId: id);
+        var overlapCheck = ValidateNoOverlap(start, end, excludeId: id);
         if (!overlapCheck.IsSuccess) return overlapCheck;
 
-        var gapCheck = CheckGaps(start, end, excludeId: id);
+        var gapCheck = ValidateRequestAgainstPunchSpan(start, end, excludeId: id);
         if (!gapCheck.IsSuccess) return gapCheck;
 
         return request.Update(category, start, end, note);
@@ -138,7 +138,7 @@ public sealed class WorkDay
         return (int)totalSpan;
     }
 
-    private Result CheckOverlap(TimeOnly start, TimeOnly end, int? excludeId)
+    private Result ValidateNoOverlap(TimeOnly start, TimeOnly end, int? excludeId)
     {
         foreach (var existing in _attendanceRequests)
         {
@@ -151,7 +151,7 @@ public sealed class WorkDay
         return Result.Ok();
     }
 
-    private Result CheckGaps(TimeOnly newStart, TimeOnly newEnd, int? excludeId)
+    private Result ValidateRequestAgainstPunchSpan(TimeOnly newStart, TimeOnly newEnd, int? excludeId)
     {
         var segments = new List<(TimeOnly Start, TimeOnly End)>();
 
