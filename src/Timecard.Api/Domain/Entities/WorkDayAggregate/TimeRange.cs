@@ -58,7 +58,28 @@ public readonly record struct TimeRange  // Value Object
             ? new TimeRange(gapStart, gapEnd)
             : null;
     }
-    
+
+
+    /// <summary>
+    /// Determines if the specified collection of time ranges contains any gaps between the segments.
+    /// </summary>
+    /// <param name="segments">The collection of time ranges to evaluate for gaps.</param>
+    /// <returns>
+    /// True if there is at least one gap between any two segments in the sorted collection; otherwise, false.
+    /// </returns>
+    public static bool HasGaps(IEnumerable<TimeRange> segments)
+    {
+        using var sorted = segments.OrderBy(s => s.Start).GetEnumerator();
+        if (!sorted.MoveNext()) return false;
+
+        var maxEnd = sorted.Current.End;
+        while (sorted.MoveNext())
+        {
+            if (sorted.Current.Start > maxEnd) return true;
+            if (sorted.Current.End > maxEnd) maxEnd = sorted.Current.End;
+        }
+        return false;
+    }
 
     public TimeSpan Duration => End - Start;
 

@@ -100,40 +100,19 @@ public sealed class WorkDay : BaseEntity<int>
 
     public int CalculateExtensionMinutes()
     {
-        var ordered = _punches.OrderBy(p => p.At).ToList();
-        var hasPunchSpan = ordered.Count >= 2;
-        var hasRequests = _attendanceRequests.Count > 0;
+        var punchSpan = GetPunchSpan();
+        if (punchSpan is null && _attendanceRequests.Count == 0) return 0;
 
-        if (!hasPunchSpan && !hasRequests) return 0;
+        var allRanges = _attendanceRequests.Select(r => r.Range).ToList();
+        if (punchSpan is not null) allRanges.Add(punchSpan.Value);
 
-        TimeOnly? punchStart = null;
-        TimeOnly? punchEnd = null;
-
-        if (hasPunchSpan)
-        {
-            punchStart = TimeOnly.FromDateTime(ordered[0].At.LocalDateTime);
-            punchEnd = TimeOnly.FromDateTime(ordered[^1].At.LocalDateTime);
-        }
-
-        var allStarts = _attendanceRequests.Select(r => r.Start).ToList();
-        var allEnds = _attendanceRequests.Select(r => r.End).ToList();
-
-        if (punchStart.HasValue) allStarts.Add(punchStart.Value);
-        if (punchEnd.HasValue) allEnds.Add(punchEnd.Value);
-
-        var effectiveStart = allStarts.Min();
-        var effectiveEnd = allEnds.Max();
-
+        var effectiveStart = allRanges.Min(r => r.Start);
+        var effectiveEnd = allRanges.Max(r => r.End);
         var totalSpan = (effectiveEnd - effectiveStart).TotalMinutes;
 
-        if (hasPunchSpan)
-        {
-            var punchSpan = (punchEnd!.Value - punchStart!.Value).TotalMinutes;
-            return (int)(totalSpan - punchSpan);
-        }
-
-        // No punch span: entire effective range is extension
-        return (int)totalSpan;
+        return punchSpan is not null
+            ? (int)(totalSpan - punchSpan.Value.Duration.TotalMinutes)
+            : (int)totalSpan;
     }
 
     private Result ValidateNoOverlap(TimeRange range, int? excludeId)
@@ -142,8 +121,7 @@ public sealed class WorkDay : BaseEntity<int>
         {
             if (excludeId.HasValue && existing.Id == excludeId.Value) continue;
 
-            var existingRange = new TimeRange(existing.Start, existing.End);
-            if (range.Overlaps(existingRange))
+            if (range.Overlaps(existing.Range))
                 return Result.Fail(Errors.WorkDay.Overlap);
         }
 
@@ -154,42 +132,28 @@ public sealed class WorkDay : BaseEntity<int>
     {
         var segments = new List<TimeRange> { range };
 
-        // Add punch span if available
-        var ordered = _punches.OrderBy(p => p.At).ToList();
-        if (ordered.Count >= 2)
-        {
-            var ps = TimeOnly.FromDateTime(ordered[0].At.LocalDateTime);
-            var pe = TimeOnly.FromDateTime(ordered[^1].At.LocalDateTime);
-            segments.Add(new TimeRange(ps, pe));
-        }
+        if (GetPunchSpan() is { } punchSpan)
+            segments.Add(punchSpan);
 
-        // Add existing attendance requests (excluding the one being updated)
         foreach (var r in _attendanceRequests)
         {
             if (excludeId.HasValue && r.Id == excludeId.Value) continue;
-            segments.Add(new TimeRange(r.Start, r.End));
+            segments.Add(r.Range);
         }
 
-        // If there's only one segment, no gaps possible
-        if (segments.Count <= 1)
-            return Result.Ok();
+        return TimeRange.HasGaps(segments)
+            ? Result.Fail(Errors.WorkDay.HasGap)
+            : Result.Ok();
+    }
 
-        // Sort by start time and ensure all segments form one connected timeline.
-        segments = segments.OrderBy(s => s.Start).ToList();
+    private TimeRange? GetPunchSpan()
+    {
+        var ordered = _punches.OrderBy(p => p.At).ToList();
+        if (ordered.Count < 2) return null;
 
-        var merged = segments[0];
-
-        for (int i = 1; i < segments.Count; i++)
-        {
-            var current = segments[i];
-            if (merged.HasGapBetween(current))
-                return Result.Fail(Errors.WorkDay.HasGap);
-
-            if (current.End > merged.End)
-                merged = new TimeRange(merged.Start, current.End);
-        }
-
-        return Result.Ok();
+        var start = TimeOnly.FromDateTime(ordered[0].At.LocalDateTime);
+        var end = TimeOnly.FromDateTime(ordered[^1].At.LocalDateTime);
+        return new TimeRange(start, end);
     }
 
     private Result ValidatePunchDate(DateTimeOffset at)
