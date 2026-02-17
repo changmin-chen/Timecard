@@ -28,6 +28,8 @@ public readonly record struct Result(Error? Error)
         if (error.IsNone) throw new ArgumentException("Failure must carry a real error.", nameof(error));
         return new Result(error);
     }
+    
+    public static implicit operator Result(Error error) => Fail(error);
 }
 
 public readonly record struct Result<T>(T? Value, Error? Error)
@@ -41,4 +43,7 @@ public readonly record struct Result<T>(T? Value, Error? Error)
         if (error.IsNone) throw new ArgumentException("Failure must carry a real error.", nameof(error));
         return new Result<T>(default, error);
     }
+    
+    public static implicit operator Result<T>(T value) => Ok(value);
+    public static implicit operator Result<T>(Error error) => Fail(error);
 }
