@@ -1,9 +1,8 @@
 using Timecard.Api.Domain.Results;
-using Timecard.Api.Infrastructure.Data;
 
-namespace Timecard.Api.Domain.Entities;
+namespace Timecard.Api.Domain.Entities.WorkDayAggregate;
 
-public sealed class WorkDay
+public sealed class WorkDay : BaseEntity<int>
 {
     private readonly List<PunchEvent> _punches = [];
     private readonly List<AttendanceRequest> _attendanceRequests = [];
@@ -17,7 +16,6 @@ public sealed class WorkDay
         Date = date;
     }
 
-    public int Id { get; private set; }
     public DateOnly Date { get; private set; }
 
     public IReadOnlyList<PunchEvent> Punches => _punches;

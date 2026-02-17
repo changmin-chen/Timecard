@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Domain.Entities;
+using Timecard.Api.Domain.Entities.WorkDayAggregate;
 
 namespace Timecard.Api.Infrastructure.Data;
 

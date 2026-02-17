@@ -1,4 +1,5 @@
 using Timecard.Api.Domain.Entities;
+using Timecard.Api.Domain.Entities.WorkDayAggregate;
 using Xunit;
 
 namespace Timecard.Tests;

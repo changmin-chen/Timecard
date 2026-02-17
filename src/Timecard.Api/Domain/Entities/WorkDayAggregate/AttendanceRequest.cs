@@ -1,15 +1,13 @@
 using Timecard.Api.Domain.Results;
-using Timecard.Api.Infrastructure.Data;
 
-namespace Timecard.Api.Domain.Entities;
+namespace Timecard.Api.Domain.Entities.WorkDayAggregate;
 
-public sealed class AttendanceRequest
+public sealed class AttendanceRequest : BaseEntity<int>
 {
     private AttendanceRequest()
     {
     }
 
-    public int Id { get; private set; }
     public int WorkDayId { get; private set; }
 
     public string Category { get; private set; } = "Leave";
