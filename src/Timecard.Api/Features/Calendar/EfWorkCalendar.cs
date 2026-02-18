@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Domain.Entities;
+using Timecard.Api.Domain.Results;
 using Timecard.Api.Infrastructure.Data;
 
 namespace Timecard.Api.Features.Calendar;
@@ -19,12 +20,10 @@ public sealed class EfWorkCalendar(TimecardDb db) : IWorkCalendar
         return Resolve(baseDay, overrideDay);
     }
 
-    public async Task<bool> IsWorkingDayAsync(string calendarId, DateOnly date, CancellationToken ct)
+    public async Task<Result<bool>> IsWorkingDayAsync(string calendarId, DateOnly date, CancellationToken ct)
     {
         var day = await GetDayAsync(calendarId, date, ct);
-        if (day is null)
-            throw new InvalidOperationException($"Calendar data missing: {calendarId} {date:yyyy-MM-dd}");
-
+        if (day is null) return Errors.Calendar.DataMissing;
         return day.IsWorking;
     }
 
@@ -60,16 +59,14 @@ public sealed class EfWorkCalendar(TimecardDb db) : IWorkCalendar
         return resolved;
     }
 
-    public async Task<ResolvedCalendarDay> GetRequiredDayAsync(string calendarId, DateOnly date, CancellationToken ct)
+    public async Task<Result<ResolvedCalendarDay>> GetRequiredDayAsync(string calendarId, DateOnly date, CancellationToken ct)
     {
         var day = await GetDayAsync(calendarId, date, ct);
-        if (day is null)
-            throw new InvalidOperationException($"Calendar data missing: {calendarId} {date:yyyy-MM-dd}");
-
+        if (day is null) return Errors.Calendar.DataMissing;
         return day;
     }
 
-    public async Task<IReadOnlyDictionary<DateOnly, ResolvedCalendarDay>> GetRequiredDaysAsync(
+    public async Task<Result<IReadOnlyDictionary<DateOnly, ResolvedCalendarDay>>> GetRequiredDaysAsync(
         string calendarId,
         DateOnly startInclusive,
         DateOnly endExclusive,
@@ -79,10 +76,10 @@ public sealed class EfWorkCalendar(TimecardDb db) : IWorkCalendar
         for (var d = startInclusive; d < endExclusive; d = d.AddDays(1))
         {
             if (!days.ContainsKey(d))
-                throw new InvalidOperationException($"Calendar data missing: {calendarId} {d:yyyy-MM-dd}");
+                return Errors.Calendar.DataMissing;
         }
 
-        return days;
+        return Result<IReadOnlyDictionary<DateOnly, ResolvedCalendarDay>>.Ok(days);
     }
 
     private static ResolvedCalendarDay? Resolve(CalendarDay? baseDay, CalendarDayOverride? overrideDay)

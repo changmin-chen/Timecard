@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Domain;
 using Timecard.Api.Features.Calendar;
+using Timecard.Api.Features.Shared;
 using Timecard.Api.Infrastructure.Data;
 
 namespace Timecard.Api.Features.Month;
@@ -16,7 +17,7 @@ public static class MonthEndpoints
         return app;
     }
 
-    private static async Task<IResult> GetMonth(TimecardDb db, IWorkCalendar calendar, int year, int month, bool includeEmpty, CancellationToken ct)
+    private static async Task<IResult> GetMonth(TimecardDb db, IWorkCalendar calendar, HttpContext http, int year, int month, bool includeEmpty, CancellationToken ct)
     {
         if (year is < 2000 or > 2100) return Results.BadRequest(new { error = "year out of range." });
         if (month is < 1 or > 12) return Results.BadRequest(new { error = "month out of range." });
@@ -46,15 +47,9 @@ public static class MonthEndpoints
                 allDates.Add(d);
         }
 
-        IReadOnlyDictionary<DateOnly, ResolvedCalendarDay> calendarDays;
-        try
-        {
-            calendarDays = await calendar.GetRequiredDaysAsync(CalendarId, start, endExclusive, ct);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Results.Problem(title: "Calendar data missing", detail: ex.Message, statusCode: StatusCodes.Status409Conflict);
-        }
+        var calendarResult = await calendar.GetRequiredDaysAsync(CalendarId, start, endExclusive, ct);
+        if (!calendarResult.IsSuccess) return calendarResult.Error!.ToProblem(http);
+        var calendarDays = calendarResult.Value!;
 
         var computedForMonth = allDates.Select(date =>
         {

@@ -2,6 +2,12 @@ namespace Timecard.Api.Domain.Results;
 
 public static class Errors
 {
+    public static class Calendar
+    {
+        public static readonly Error DataMissing =
+            new("calendar.data_missing", "Calendar data is missing for the requested date.", ErrorKind.Conflict, "Calendar data missing");
+    }
+
     public static class WorkDay
     {
         public static readonly Error PunchNotFound =
