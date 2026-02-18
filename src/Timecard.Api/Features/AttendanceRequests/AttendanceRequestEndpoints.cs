@@ -36,15 +36,9 @@ public static class AttendanceRequestEndpoints
         if (!TimeOnly.TryParse(req.End, out var end))
             return Results.BadRequest(new { error = "Invalid end time. Use HH:mm." });
 
-        ResolvedCalendarDay calendarDay;
-        try
-        {
-            calendarDay = await calendar.GetRequiredDayAsync(CalendarId, d, ct);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Results.Problem(title: "Calendar data missing", detail: ex.Message, statusCode: StatusCodes.Status409Conflict);
-        }
+        var calendarResult = await calendar.GetRequiredDayAsync(CalendarId, d, ct);
+        if (!calendarResult.IsSuccess) return calendarResult.Error!.ToProblem(http);
+        var calendarDay = calendarResult.Value!;
 
         var day = await repo.GetOrCreateDay(d, ct);
 
@@ -69,15 +63,9 @@ public static class AttendanceRequestEndpoints
         var day = await repo.LoadByAttendanceRequestId(id, ct);
         if (day is null) return Results.NotFound();
 
-        ResolvedCalendarDay calendarDay;
-        try
-        {
-            calendarDay = await calendar.GetRequiredDayAsync(CalendarId, day.Date, ct);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Results.Problem(title: "Calendar data missing", detail: ex.Message, statusCode: StatusCodes.Status409Conflict);
-        }
+        var calendarResult = await calendar.GetRequiredDayAsync(CalendarId, day.Date, ct);
+        if (!calendarResult.IsSuccess) return calendarResult.Error!.ToProblem(http);
+        var calendarDay = calendarResult.Value!;
 
         var rangeResult = TimeRange.Create(start, end);
         if (!rangeResult.IsSuccess) return rangeResult.Error!.ToProblem(http);
@@ -94,15 +82,9 @@ public static class AttendanceRequestEndpoints
         var day = await repo.LoadByAttendanceRequestId(id, ct);
         if (day is null) return Results.NotFound();
 
-        ResolvedCalendarDay calendarDay;
-        try
-        {
-            calendarDay = await calendar.GetRequiredDayAsync(CalendarId, day.Date, ct);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Results.Problem(title: "Calendar data missing", detail: ex.Message, statusCode: StatusCodes.Status409Conflict);
-        }
+        var calendarResult = await calendar.GetRequiredDayAsync(CalendarId, day.Date, ct);
+        if (!calendarResult.IsSuccess) return calendarResult.Error!.ToProblem(http);
+        var calendarDay = calendarResult.Value!;
 
         var result = day.RemoveAttendanceRequest(id);
         if (!result.IsSuccess) return result.Error!.ToProblem(http);

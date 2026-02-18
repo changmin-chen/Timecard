@@ -31,15 +31,9 @@ public static class PunchEndpoints
         var now = req?.At ?? DateTimeOffset.UtcNow;
         var date = DateOnly.FromDateTime(now.LocalDateTime);
 
-        ResolvedCalendarDay calendarDay;
-        try
-        {
-            calendarDay = await calendar.GetRequiredDayAsync(CalendarId, date, ct);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Results.Problem(title: "Calendar data missing", detail: ex.Message, statusCode: StatusCodes.Status409Conflict);
-        }
+        var calendarResult = await calendar.GetRequiredDayAsync(CalendarId, date, ct);
+        if (!calendarResult.IsSuccess) return calendarResult.Error!.ToProblem(http);
+        var calendarDay = calendarResult.Value!;
 
         var day = await repo.GetOrCreateDay(date, ct);
 
@@ -55,15 +49,9 @@ public static class PunchEndpoints
         var day = await repo.LoadByPunchId(id, ct);
         if (day is null) return Results.NotFound();
 
-        ResolvedCalendarDay calendarDay;
-        try
-        {
-            calendarDay = await calendar.GetRequiredDayAsync(CalendarId, day.Date, ct);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Results.Problem(title: "Calendar data missing", detail: ex.Message, statusCode: StatusCodes.Status409Conflict);
-        }
+        var calendarResult = await calendar.GetRequiredDayAsync(CalendarId, day.Date, ct);
+        if (!calendarResult.IsSuccess) return calendarResult.Error!.ToProblem(http);
+        var calendarDay = calendarResult.Value!;
 
         var result = day.RemovePunch(id);
         if (!result.IsSuccess) return result.Error!.ToProblem(http);
