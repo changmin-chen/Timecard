@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Timecard.Api.Domain.Entities;
+using Timecard.Api.Domain.Entities.WorkDayAggregate;
 
 namespace Timecard.Api.Infrastructure.Data;
 
@@ -14,18 +14,10 @@ public sealed class TimecardDb(DbContextOptions<TimecardDb> options) : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        var dateOnlyConverter = new ValueConverter<DateOnly, string>(
-            d => d.ToString("yyyy-MM-dd"),
-            s => DateOnly.Parse(s));
-
-        var timeOnlyConverter = new ValueConverter<TimeOnly, string>(
-            t => t.ToString("HH:mm"),
-            s => TimeOnly.Parse(s));
-
         modelBuilder.Entity<WorkDay>(e =>
         {
             e.HasKey(x => x.Id);
-            e.Property(x => x.Date).HasConversion(dateOnlyConverter);
+            e.Property(x => x.Date).HasColumnType("date");
             e.HasIndex(x => x.Date).IsUnique();
 
             e.Metadata.FindNavigation(nameof(WorkDay.Punches))!
@@ -56,19 +48,33 @@ public sealed class TimecardDb(DbContextOptions<TimecardDb> options) : DbContext
         modelBuilder.Entity<AttendanceRequest>(e =>
         {
             e.HasKey(x => x.Id);
+
             e.Property(x => x.Category).HasMaxLength(64);
             e.Property(x => x.Note).HasMaxLength(4000);
             e.Property(x => x.WorkDayId);
-            e.Property(x => x.Start).HasConversion(timeOnlyConverter);
-            e.Property(x => x.End).HasConversion(timeOnlyConverter);
+
+            e.ComplexProperty(x => x.Range, b => {
+                b.Property(p => p.Start)
+                    .HasColumnName("Start")
+                    .HasColumnType("time without time zone");
+                b.Property(p => p.End)
+                    .HasColumnName("End")
+                    .HasColumnType("time without time zone");
+            });
+            
             e.HasIndex(x => new { x.WorkDayId, x.Category });
+
+            // Keep bad data out of the DB.
+            e.ToTable(t => t.HasCheckConstraint(
+                "CK_AttendanceRequests_StartBeforeEnd",
+                "\"End\" > \"Start\""));
         });
 
         modelBuilder.Entity<CalendarDay>(e =>
         {
             e.HasKey(x => new { x.CalendarId, x.Date });
             e.Property(x => x.CalendarId).HasMaxLength(64);
-            e.Property(x => x.Date).HasConversion(dateOnlyConverter);
+            e.Property(x => x.Date).HasColumnType("date");
             e.Property(x => x.Kind).HasMaxLength(64);
             e.Property(x => x.Note).HasMaxLength(4000);
             e.Property(x => x.Source).HasMaxLength(64);
@@ -80,7 +86,7 @@ public sealed class TimecardDb(DbContextOptions<TimecardDb> options) : DbContext
         {
             e.HasKey(x => new { x.CalendarId, x.Date });
             e.Property(x => x.CalendarId).HasMaxLength(64);
-            e.Property(x => x.Date).HasConversion(dateOnlyConverter);
+            e.Property(x => x.Date).HasColumnType("date");
             e.Property(x => x.Kind).HasMaxLength(64);
             e.Property(x => x.Note).HasMaxLength(4000);
             e.Property(x => x.Source).HasMaxLength(64);

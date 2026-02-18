@@ -28,5 +28,6 @@ public sealed record MonthDto(
     int Year,
     int Month,
     int FlexBankBalance,
+    int TotalDeficitMinutes,
     IReadOnlyList<MonthDayDto> Days
 );

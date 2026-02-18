@@ -1,12 +1,17 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { mins } from '../utils.js'
 import { useMonth } from '../composables/useMonth.js'
+import { useMonthInvalidation } from '../composables/useMonthInvalidation.js'
+
+const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 
 const { month, loading, loadMonth } = useMonth()
+const { monthStale } = useMonthInvalidation()
 
 const monthPick = ref('')
 const includeEmpty = ref(false)
+const showDetail = ref(false)
 
 onMounted(() => {
   const now = new Date()
@@ -14,6 +19,14 @@ onMounted(() => {
   const mm = String(now.getMonth() + 1).padStart(2, '0')
   monthPick.value = `${yyyy}-${mm}`
   load()
+})
+
+watch(monthStale, () => {
+  if (month.value) load()
+})
+
+watch(includeEmpty, () => {
+  if (month.value) load()
 })
 
 function load() {
@@ -24,8 +37,24 @@ function load() {
   loadMonth(y, m, includeEmpty.value)
 }
 
-function monthSummary(m) {
-  return `${m.year} 年 ${m.month} 月 ｜ 彈性餘額：${mins(m.flexBankBalance)} ｜ 共 ${m.days.length} 天`
+function todayStr() {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function isFuture(dateStr) {
+  return dateStr > todayStr()
+}
+
+function fmtDateShort(dateStr) {
+  if (!dateStr) return '\u2014'
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  const wd = weekdays[dt.getDay()]
+  return `${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')} (${wd})`
 }
 
 function deltaCls(d) {
@@ -35,6 +64,24 @@ function deltaCls(d) {
 function deficitCls(d) {
   return d > 0 ? 'bad' : ''
 }
+
+const settledDeficit = computed(() => {
+  if (!month.value) return 0
+  const today = todayStr()
+  return month.value.days
+    .filter(d => d.date <= today)
+    .reduce((sum, d) => sum + (d.deficitMinutes || 0), 0)
+})
+
+const attendedDays = computed(() => {
+  if (!month.value) return 0
+  return month.value.days.filter(d => d.punchCount > 0).length
+})
+
+const totalWorkDays = computed(() => {
+  if (!month.value) return 0
+  return month.value.days.filter(d => !d.isNonWorkingDay).length
+})
 </script>
 
 <template>
@@ -50,49 +97,63 @@ function deficitCls(d) {
           <input type="checkbox" v-model="includeEmpty" />
           顯示所有日期
         </label>
-        <button class="ghost" @click="load" :disabled="loading">載入</button>
+        <button class="ghost" @click="load" :disabled="loading">重新整理</button>
       </div>
     </div>
 
-    <div v-if="month" class="hint" style="margin-top: 12px; font-size: 15px; font-weight: 600; color: var(--text);">
-      {{ monthSummary(month) }}
+    <div v-if="month" class="month-stats">
+      <div class="month-stat-card">
+        <span class="month-stat-label">彈性餘額</span>
+        <span class="month-stat-value" :class="deltaCls(month.flexBankBalance)">{{ mins(month.flexBankBalance) }} 分</span>
+      </div>
+      <div class="month-stat-card">
+        <span class="month-stat-label">已結算不足</span>
+        <span class="month-stat-value" :class="deficitCls(settledDeficit)">{{ settledDeficit }} 分</span>
+      </div>
+      <div class="month-stat-card">
+        <span class="month-stat-label">出勤天數</span>
+        <span class="month-stat-value">{{ attendedDays }} / {{ totalWorkDays }} 天</span>
+      </div>
     </div>
+
     <div v-if="month && !month.days.length" class="hint">這個月份目前沒有資料。</div>
-    <div v-if="month && month.days.length" class="tableWrap">
-      <table>
-        <thead>
-          <tr>
-            <th>日期</th>
-            <th>Punch數</th>
-            <th>規定</th>
-            <th>已記錄</th>
-            <th>延伸</th>
-            <th>有效</th>
-            <th>差額</th>
-            <th>彈性候選</th>
-            <th>實際套用</th>
-            <th>彈性餘額</th>
-            <th>不足</th>
-            <th>備註</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="d in month.days" :key="d.date">
-            <td class="mono">{{ d.date }}<span v-if="d.isNonWorkingDay" class="badge"> OFF</span></td>
-            <td class="mono">{{ d.punchCount }}</td>
-            <td class="mono">{{ d.plannedMinutes }}</td>
-            <td class="mono">{{ d.workedMinutes }}</td>
-            <td class="mono">{{ mins(d.extensionMinutes) }}</td>
-            <td class="mono">{{ d.effectiveMinutes }}</td>
-            <td class="mono" :class="deltaCls(d.deltaMinutes)">{{ mins(d.deltaMinutes) }}</td>
-            <td class="mono">{{ mins(d.flexDeltaMinutes) }}</td>
-            <td class="mono">{{ mins(d.flexUsedMinutes) }}</td>
-            <td class="mono">{{ d.flexBankBalance }}</td>
-            <td class="mono" :class="deficitCls(d.deficitMinutes)">{{ d.deficitMinutes ? d.deficitMinutes : '' }}</td>
-            <td>{{ d.note || '' }}</td>
-          </tr>
-        </tbody>
-      </table>
+    <div v-if="month && month.days.length">
+      <label class="inline small" style="margin-top: 12px;">
+        <input type="checkbox" v-model="showDetail" />
+        顯示計算明細
+      </label>
+      <div class="tableWrap">
+        <table :style="{ minWidth: showDetail ? '1100px' : '680px' }">
+          <thead>
+            <tr>
+              <th>日期</th>
+              <th>出勤</th>
+              <th>差額</th>
+              <th>彈性餘額</th>
+              <th>不足</th>
+              <th v-if="showDetail">打卡</th>
+              <th v-if="showDetail">延伸</th>
+              <th v-if="showDetail">彈性候選</th>
+              <th v-if="showDetail">實際套用</th>
+              <th>備註</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="d in month.days" :key="d.date" :class="{ future: isFuture(d.date) }">
+              <td class="mono">{{ fmtDateShort(d.date) }}<span v-if="d.isNonWorkingDay" class="badge"> OFF</span></td>
+              <td class="mono">{{ d.effectiveMinutes }}/{{ d.plannedMinutes }}</td>
+              <td class="mono" :class="deltaCls(d.deltaMinutes)">{{ mins(d.deltaMinutes) }}</td>
+              <td class="mono">{{ d.flexBankBalance }}</td>
+              <td class="mono" :class="deficitCls(d.deficitMinutes)">{{ isFuture(d.date) ? '\u2014' : (d.deficitMinutes ? d.deficitMinutes : '') }}</td>
+              <td v-if="showDetail" class="mono">{{ d.punchCount }}</td>
+              <td v-if="showDetail" class="mono">{{ mins(d.extensionMinutes) }}</td>
+              <td v-if="showDetail" class="mono">{{ mins(d.flexDeltaMinutes) }}</td>
+              <td v-if="showDetail" class="mono">{{ mins(d.flexUsedMinutes) }}</td>
+              <td>{{ d.note || '' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </section>
 </template>

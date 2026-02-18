@@ -1,5 +1,6 @@
 using Timecard.Api.Domain;
 using Timecard.Api.Domain.Entities;
+using Timecard.Api.Domain.Entities.WorkDayAggregate;
 using Timecard.Api.Features.Calendar;
 
 namespace Timecard.Api.Features.Days;

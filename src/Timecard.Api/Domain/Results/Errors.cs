@@ -1,4 +1,4 @@
-namespace Timecard.Api.Domain.Result;
+namespace Timecard.Api.Domain.Results;
 
 public static class Errors
 {
@@ -25,7 +25,7 @@ public static class Errors
         public static readonly Error Overlap =
             new("workday.overlap", "Attendance request overlaps with an existing one.", ErrorKind.Conflict, "Overlap");
 
-        public static readonly Error Gap =
+        public static readonly Error HasGap =
             new("workday.gap", "There is a gap between time segments. Attendance requests must be contiguous with punch time.",
                 ErrorKind.Conflict, "Gap");
     }
