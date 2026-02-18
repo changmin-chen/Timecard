@@ -101,37 +101,6 @@ select {
   font-size: 14px;
 }
 
-/* vue-datepicker light theme overrides */
-.dp__theme_light {
-  --dp-background-color: #ffffff;
-  --dp-text-color: #1a1a2e;
-  --dp-hover-color: #f0f1f3;
-  --dp-hover-text-color: #1a1a2e;
-  --dp-primary-color: #2563eb;
-  --dp-primary-disabled-color: #93b4f5;
-  --dp-primary-text-color: #fff;
-  --dp-secondary-color: #6b7280;
-  --dp-border-color: #e2e5ea;
-  --dp-menu-border-color: #e2e5ea;
-  --dp-border-color-hover: #2563eb;
-  --dp-disabled-color: #f0f1f3;
-  --dp-disabled-color-text: #b0b0b0;
-  --dp-scroll-bar-background: #f5f6f8;
-  --dp-scroll-bar-color: #e2e5ea;
-  --dp-success-color: #2563eb;
-  --dp-success-color-disabled: #93b4f5;
-  --dp-icon-color: #6b7280;
-  --dp-danger-color: #dc2626;
-  --dp-marker-color: #2563eb;
-  --dp-tooltip-color: #f9fafb;
-  --dp-highlight-color: rgba(37,99,235,.08);
-  --dp-input-background-color: #f9fafb;
-}
-.dp__input {
-  border-radius: 10px !important;
-  font-family: inherit !important;
-}
-
 /* stat grid for TodayCard */
 .stat-grid {
   display: grid;

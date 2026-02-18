@@ -37,7 +37,7 @@ const timeError = computed(() => {
 })
 
 const canSubmit = computed(() => {
-    return !props.loading && !timeError.value
+    return !props.loading && !timeError.value && !!form.start && !!form.end
 })
 
 function adjustTime(field, deltaMinutes) {
@@ -116,7 +116,7 @@ function onSubmit() {
         <div class="form-row">
             <div class="field">
                 <span class="field-label">起始時間</span>
-                <input type="time" v-model="form.start" required/>
+                <input type="time" lang="en-GB" v-model="form.start" required/>
                 <div class="time-adjust">
                     <button type="button" @click="adjustTime('start', -30)">-30</button>
                     <button type="button" @click="adjustTime('start', -5)">-5</button>
@@ -126,7 +126,7 @@ function onSubmit() {
             </div>
             <div class="field">
                 <span class="field-label">結束時間</span>
-                <input type="time" v-model="form.end" required/>
+                <input type="time" lang="en-GB" v-model="form.end" required/>
                 <div class="time-adjust">
                     <button type="button" @click="adjustTime('end', -30)">-30</button>
                     <button type="button" @click="adjustTime('end', -5)">-5</button>
