@@ -1,7 +1,7 @@
-﻿namespace Timecard.Api.Domain.Entities;
+﻿namespace Timecard.Api.Domain.Entities.WorkDayAggregate;
 
 
-public sealed class PunchEvent
+public sealed class PunchEvent : BaseEntity<int>
 {
     private PunchEvent()
     {
@@ -13,7 +13,6 @@ public sealed class PunchEvent
         Note = note?.Trim() ?? "";
     }
 
-    public int Id { get; private set; }
     public int WorkDayId { get; private set; }
 
     public DateTimeOffset At { get; private set; }

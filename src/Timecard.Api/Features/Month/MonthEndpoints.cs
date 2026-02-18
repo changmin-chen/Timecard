@@ -95,6 +95,6 @@ public static class MonthEndpoints
             );
         }).ToList();
 
-        return Results.Ok(new MonthDto(Year: year, Month: month, FlexBankBalance: monthReport.FlexBankBalance, Days: dtoDays));
+        return Results.Ok(new MonthDto(Year: year, Month: month, FlexBankBalance: monthReport.FlexBankBalance, TotalDeficitMinutes: monthReport.TotalDeficitMinutes, Days: dtoDays));
     }
 }

@@ -1,5 +1,5 @@
-using System.Diagnostics;
-using Timecard.Api.Domain.Result;
+﻿using System.Diagnostics;
+using Timecard.Api.Domain.Results;
 
 namespace Timecard.Api.Features.Shared;
 
@@ -30,7 +30,7 @@ public static class ResultHttpExtensions
             instance: http.Request.Path,
             extensions: new Dictionary<string, object?>
             {
-                ["code"] = error.Code,
+                ["errorCode"] = error.Code,
                 ["traceId"] = Activity.Current?.Id ?? http.TraceIdentifier
             }
         );

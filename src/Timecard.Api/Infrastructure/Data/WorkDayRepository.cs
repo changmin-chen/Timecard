@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Domain.Entities;
+using Timecard.Api.Domain.Entities.WorkDayAggregate;
 
 namespace Timecard.Api.Infrastructure.Data;
 
@@ -9,6 +10,7 @@ public sealed class WorkDayRepository(TimecardDb db)
         => db.WorkDays
             .Include(d => d.Punches)
             .Include(d => d.AttendanceRequests)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(d => d.Date == date, ct);
 
     public Task<WorkDay?> LoadByPunchId(int punchId, CancellationToken ct)
@@ -16,6 +18,7 @@ public sealed class WorkDayRepository(TimecardDb db)
             .Where(d => d.Punches.Any(p => p.Id == punchId))
             .Include(d => d.Punches)
             .Include(d => d.AttendanceRequests)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(ct);
 
     public Task<WorkDay?> LoadByAttendanceRequestId(int requestId, CancellationToken ct)
@@ -23,6 +26,7 @@ public sealed class WorkDayRepository(TimecardDb db)
             .Where(d => d.AttendanceRequests.Any(a => a.Id == requestId))
             .Include(d => d.Punches)
             .Include(d => d.AttendanceRequests)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(ct);
 
     public async Task<WorkDay> GetOrCreateDay(DateOnly date, CancellationToken ct)

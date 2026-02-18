@@ -6,7 +6,11 @@ import PunchList from './PunchList.vue'
 import AttendanceForm from './AttendanceForm.vue'
 import AttendanceList from './AttendanceList.vue'
 
-const { day, loading, refreshToday, punch, deletePunch, addAttendanceRequest, deleteAttendanceRequest } = useDay()
+const {
+  day, loading, currentDate, isToday,
+  refreshToday, goToday, goPrev, goNext,
+  punch, deletePunch, addAttendanceRequest, deleteAttendanceRequest
+} = useDay()
 
 onMounted(() => refreshToday())
 </script>
@@ -14,16 +18,18 @@ onMounted(() => refreshToday())
 <template>
   <section class="card">
     <div class="row">
-      <div>
-        <h2>今天</h2>
-        <div v-if="day" style="font-size: 15px; color: var(--muted); margin-top: 4px;">
-          {{ fmtDate(day.date) }}
-        </div>
-        <div v-else class="hint">載入中…</div>
+      <div class="date-nav">
+        <button class="date-nav-btn" @click="goPrev" :disabled="loading" title="前一天">&#9664;</button>
+        <span class="date-nav-label">{{ fmtDate(currentDate) }}</span>
+        <button class="date-nav-btn" @click="goNext" :disabled="loading" title="後一天">&#9654;</button>
+        <span v-if="isToday" class="date-nav-pill today">今天</span>
+        <button v-else class="date-nav-pill back" @click="goToday" :disabled="loading">回到今天</button>
       </div>
       <div class="actions">
-        <button class="primary" @click="punch" :disabled="loading">打卡（Punch）</button>
-        <button class="ghost" @click="refreshToday" :disabled="loading">重新整理</button>
+        <button v-if="isToday" class="primary" @click="punch" :disabled="loading">打卡（Punch）</button>
+        <button class="ghost" @click="isToday ? refreshToday() : goToday()" :disabled="loading">
+          {{ isToday ? '重新整理' : '回到今天' }}
+        </button>
       </div>
     </div>
 
@@ -66,13 +72,13 @@ onMounted(() => refreshToday())
 
       <div>
         <AttendanceForm
-          :date="day?.date ?? ''"
+          :date="currentDate"
+          :loading="loading"
           @submit="addAttendanceRequest"
         />
 
         <AttendanceList
           :requests="day?.attendanceRequests ?? []"
-          :date="fmtDate(day?.date ?? '')"
           @delete="deleteAttendanceRequest"
         />
       </div>

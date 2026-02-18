@@ -17,11 +17,13 @@ public sealed record DailyFlexDetail(
 );
 
 /// <summary>
-/// 整月彈性時數報表：逐日明細與月底餘額。
+/// 整月彈性時數報表：逐日明細、月底餘額、以及累計不足時數。
 /// </summary>
 /// <param name="Days">逐日明細。</param>
 /// <param name="FlexBankBalance">月底彈性銀行餘額。</param>
+/// <param name="TotalDeficitMinutes">整月累計不足時數（需以請假等方式補足的總分鐘數，≥ 0）。</param>
 public sealed record MonthlyFlexReport(
     IReadOnlyList<DailyFlexDetail> Days,
-    int FlexBankBalance
+    int FlexBankBalance,
+    int TotalDeficitMinutes
 );
