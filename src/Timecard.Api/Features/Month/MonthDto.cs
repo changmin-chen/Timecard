@@ -12,11 +12,11 @@ public sealed record MonthDayDto(
     int PunchCount,
 
     int PlannedMinutes,
-    int WorkedMinutes,
-    int ExtensionMinutes,
-    int EffectiveMinutes,
-    int DeltaMinutes,
-    int FlexDeltaMinutes,
+    int PunchedMinutes,
+    int GrantedMinutes,
+    int RecognizedMinutes,
+    int AttendanceDeltaMinutes,
+    int FlexBankDeltaMinutes,
 
     int FlexUsedMinutes,
     int FlexBankBalance,

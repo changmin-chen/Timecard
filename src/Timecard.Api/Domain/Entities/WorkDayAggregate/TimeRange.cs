@@ -7,16 +7,16 @@ namespace Timecard.Api.Domain.Entities.WorkDayAggregate;
 /// </summary>
 public readonly record struct TimeRange
 {
-    public TimeOnly Start { get; } 
+    public TimeOnly Start { get; }
     public TimeOnly End { get; }
-    
+
     public TimeSpan Duration => End - Start;
-    
+
 
     public TimeRange(TimeOnly start, TimeOnly end)
     {
         if (end <= start) throw new ArgumentException("End must be after Start.");
-        
+
         Start = start;
         End = end;
     }
@@ -49,15 +49,34 @@ public readonly record struct TimeRange
     public TimeRange? TryGetGap(TimeRange other)
     {
         // Determine the "gap window": earlier end → later start
-        TimeOnly gapStart = End < other.End ? End : other.End; // min(End, other.End)
-        TimeOnly gapEnd = Start > other.Start ? Start : other.Start; // max(Start, other.Start)
+        var gapStart = End < other.End ? End : other.End; // min(End, other.End)
+        var gapEnd = Start > other.Start ? Start : other.Start; // max(Start, other.Start)
 
         return gapEnd > gapStart
             ? new TimeRange(gapStart, gapEnd)
             : null;
     }
-    
-    
+
+    /// <summary>
+    /// Returns the intersection of this range and <paramref name="other"/>,
+    /// or <see langword="null"/> when they do not overlap (touching endpoints excluded).
+    /// </summary>
+    /// <example>
+    /// [08:00~10:00].TryIntersect([09:00~11:00]) → TimeRange(09:00, 10:00)
+    /// [08:00~09:00].TryIntersect([09:00~10:00]) → null  (touching, not overlapping)
+    /// [08:00~09:00].TryIntersect([10:00~11:00]) → null
+    /// </example>
+    public TimeRange? TryIntersect(TimeRange other)
+    {
+        var intersectStart = Start > other.Start ? Start : other.Start; // max(Start, other.Start)
+        var intersectEnd = End < other.End ? End : other.End; // min(End, other.End)
+
+        return intersectEnd > intersectStart
+            ? new TimeRange(intersectStart, intersectEnd)
+            : null;
+    }
+
+
     public override string ToString() => $"{Start:HH:mm} ~ {End:HH:mm}";
 }
 
@@ -85,7 +104,7 @@ public static class TimeRangeCollectionExtensions
 
             return list.Max(r => r.End) - list.Min(r => r.Start);
         }
-        
+
         /// <summary>
         /// Returns true if there is at least one gap between any two segments.
         /// </summary>

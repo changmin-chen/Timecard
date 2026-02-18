@@ -4,18 +4,18 @@ namespace Timecard.Api.Domain;
 /// 單日工時結算：實際工時、與計畫的差額、以及 clamp 後的彈性增減量。
 /// </summary>
 /// <param name="PlannedMinutes">當日應出勤分鐘數（免上班日為 0）。</param>
-/// <param name="WorkedMinutes">打卡區間推算的實際在班分鐘數。</param>
-/// <param name="CreditedMinutes">出勤申請（請假／出差等）額外認列的分鐘數。</param>
-/// <param name="EffectiveMinutes">WorkedMinutes + CreditedMinutes。</param>
-/// <param name="DeltaMinutes">EffectiveMinutes − PlannedMinutes（正值＝多做、負值＝不足）。</param>
-/// <param name="FlexDeltaMinutes">累積上限 +55、消耗不限；可存入（正）／提領（負）彈性銀行的分鐘數；免上班日固定為 0。</param>
+/// <param name="PunchedMinutes">打卡區間推算的實際在班分鐘數。</param>
+/// <param name="GrantedMinutes">出勤申請（請假／出差等）額外認列的分鐘數。</param>
+/// <param name="RecognizedMinutes">PunchedMinutes + GrantedMinutes，實際被認列的總工時。</param>
+/// <param name="AttendanceDeltaMinutes">RecognizedMinutes − PlannedMinutes（正值＝多做、負值＝不足）。</param>
+/// <param name="FlexBankDeltaMinutes">累積/消耗皆上限 ±55；可存入（正）／提領（負）彈性銀行的分鐘數；免上班日固定為 0。</param>
 public sealed record DailyWorkSummary(
     int PlannedMinutes,
-    int WorkedMinutes,
-    int CreditedMinutes,
-    int EffectiveMinutes,
-    int DeltaMinutes,
-    int FlexDeltaMinutes
+    int PunchedMinutes,
+    int GrantedMinutes,
+    int RecognizedMinutes,
+    int AttendanceDeltaMinutes,
+    int FlexBankDeltaMinutes
 );
 
 /// <summary>帶日期的單日工時結算，作為月結算的輸入。</summary>

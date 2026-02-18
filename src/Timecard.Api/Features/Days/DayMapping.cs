@@ -15,7 +15,7 @@ public static class DayMapping
 
         var punches = day?.Punches.OrderBy(p => p.At).ToList() ?? [];
         var (start, end, _) = day?.DeriveSpan() ?? (null, null, 0);
-        var facts = day.ToDailySettlementFacts(isWorkingDay: !isNonWorking);
+        var facts = DailySettlementFacts.From(day, isWorkingDay: !isNonWorking);
         var computed = WorkRules.ComputeDay(facts);
 
         return new DayDto(
@@ -29,11 +29,11 @@ public static class DayMapping
         End: end,
         PunchCount: punches.Count,
         PlannedMinutes: computed.PlannedMinutes,
-        WorkedMinutes: computed.WorkedMinutes,
-        ExtensionMinutes: computed.CreditedMinutes,
-        EffectiveMinutes: computed.EffectiveMinutes,
-        DeltaMinutes: computed.DeltaMinutes,
-        FlexDeltaMinutes: computed.FlexDeltaMinutes,
+        PunchedMinutes: computed.PunchedMinutes,
+        ExtensionMinutes: computed.GrantedMinutes,
+        RecognizedMinutes: computed.RecognizedMinutes,
+        AttendanceDeltaMinutes: computed.AttendanceDeltaMinutes,
+        FlexBankDeltaMinutes: computed.FlexBankDeltaMinutes,
         Punches: punches.Select(p => new PunchDto(p.Id, p.At, p.Note)).ToList(),
         AttendanceRequests: day?.AttendanceRequests
             .OrderBy(a => a.Start)

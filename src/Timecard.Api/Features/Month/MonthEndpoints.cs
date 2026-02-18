@@ -55,7 +55,7 @@ public static class MonthEndpoints
         var computedForMonth = allDates.Select(date =>
         {
             workDayMap.TryGetValue(date, out var day);
-            var facts = day.ToDailySettlementFacts(isWorkingDay: calendarDays[date].IsWorking);
+            var facts = DailySettlementFacts.From(day, isWorkingDay: calendarDays[date].IsWorking);
             var computed = WorkRules.ComputeDay(facts);
             return new DatedWorkSummary(date, computed);
         });
@@ -77,11 +77,11 @@ public static class MonthEndpoints
                 CalendarSource: calendarDay.Source,
                 PunchCount: src?.Punches.Count ?? 0,
                 PlannedMinutes: d.Day.PlannedMinutes,
-                WorkedMinutes: d.Day.WorkedMinutes,
-                ExtensionMinutes: d.Day.CreditedMinutes,
-                EffectiveMinutes: d.Day.EffectiveMinutes,
-                DeltaMinutes: d.Day.DeltaMinutes,
-                FlexDeltaMinutes: d.Day.FlexDeltaMinutes,
+                PunchedMinutes: d.Day.PunchedMinutes,
+                GrantedMinutes: d.Day.GrantedMinutes,
+                RecognizedMinutes: d.Day.RecognizedMinutes,
+                AttendanceDeltaMinutes: d.Day.AttendanceDeltaMinutes,
+                FlexBankDeltaMinutes: d.Day.FlexBankDeltaMinutes,
                 FlexUsedMinutes: d.FlexUsedMinutes,
                 FlexBankBalance: d.FlexBankBalance,
                 DeficitMinutes: d.DeficitMinutes

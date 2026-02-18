@@ -16,11 +16,11 @@ public sealed record DayDto(
     int PunchCount,
 
     int PlannedMinutes,
-    int WorkedMinutes,
+    int PunchedMinutes,
     int ExtensionMinutes,
-    int EffectiveMinutes,
-    int DeltaMinutes,
-    int FlexDeltaMinutes,
+    int RecognizedMinutes,
+    int AttendanceDeltaMinutes,
+    int FlexBankDeltaMinutes,
 
     IReadOnlyList<PunchDto> Punches,
     IReadOnlyList<AttendanceRequestDto> AttendanceRequests

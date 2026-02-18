@@ -130,24 +130,24 @@ const totalWorkDays = computed(() => {
               <th>出勤</th>
               <th>差額</th>
               <th>彈性餘額</th>
-              <th>不足</th>
+              <th>彈性不足</th>
               <th v-if="showDetail">打卡</th>
-              <th v-if="showDetail">延伸</th>
+              <th v-if="showDetail">差假延伸</th>
               <th v-if="showDetail">彈性候選</th>
-              <th v-if="showDetail">實際套用</th>
+              <th v-if="showDetail">實際彈性套用</th>
               <th>備註</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="d in month.days" :key="d.date" :class="{ future: isFuture(d.date) }">
               <td class="mono">{{ fmtDateShort(d.date) }}<span v-if="d.isNonWorkingDay" class="badge"> OFF</span></td>
-              <td class="mono">{{ d.effectiveMinutes }}/{{ d.plannedMinutes }}</td>
-              <td class="mono" :class="deltaCls(d.deltaMinutes)">{{ mins(d.deltaMinutes) }}</td>
+              <td class="mono">{{ d.recognizedMinutes }}/{{ d.plannedMinutes }}</td>
+              <td class="mono" :class="deltaCls(d.attendanceDeltaMinutes)">{{ mins(d.attendanceDeltaMinutes) }}</td>
               <td class="mono">{{ d.flexBankBalance }}</td>
               <td class="mono" :class="deficitCls(d.deficitMinutes)">{{ isFuture(d.date) ? '\u2014' : (d.deficitMinutes ? d.deficitMinutes : '') }}</td>
               <td v-if="showDetail" class="mono">{{ d.punchCount }}</td>
-              <td v-if="showDetail" class="mono">{{ mins(d.extensionMinutes) }}</td>
-              <td v-if="showDetail" class="mono">{{ mins(d.flexDeltaMinutes) }}</td>
+              <td v-if="showDetail" class="mono">{{ mins(d.grantedMinutes) }}</td>
+              <td v-if="showDetail" class="mono">{{ mins(d.flexBankDeltaMinutes) }}</td>
               <td v-if="showDetail" class="mono">{{ mins(d.flexUsedMinutes) }}</td>
               <td>{{ d.note || '' }}</td>
             </tr>

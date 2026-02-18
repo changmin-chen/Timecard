@@ -37,7 +37,7 @@ public class WorkDayAggregateTests
     }
 
     [Fact]
-    public void DeriveSpan_TwoPunches_ReturnsWorkedMinutes()
+    public void DeriveSpan_TwoPunches_ReturnsPunchedMinutes()
     {
         var day = CreateDay();
         day.AddPunch(At(9, 0), "", TimeSpan.Zero, force: true);
@@ -45,7 +45,7 @@ public class WorkDayAggregateTests
 
         var span = day.DeriveSpan();
 
-        Assert.Equal(540, span.WorkedMinutes);
+        Assert.Equal(540, span.PunchedMinutes);
         Assert.NotNull(span.Start);
         Assert.NotNull(span.End);
     }
@@ -179,28 +179,28 @@ public class WorkDayAggregateTests
         Assert.Contains("gap", result.Error!.Message);
     }
 
-    // --- CalculateExtensionMinutes tests ---
+    // --- CalculateGrantedMinutes tests ---
 
     [Fact]
-    public void CalculateExtensionMinutes_NoPunchesNoRequests_ReturnsZero()
+    public void CalculateGrantedMinutes_NoPunchesNoRequests_ReturnsZero()
     {
         var day = CreateDay();
 
-        Assert.Equal(0, day.CalculateExtensionMinutes());
+        Assert.Equal(0, day.CalculateGrantedMinutes());
     }
 
     [Fact]
-    public void CalculateExtensionMinutes_OnlyPunchesNoRequests_ReturnsZero()
+    public void CalculateGrantedMinutes_OnlyPunchesNoRequests_ReturnsZero()
     {
         var day = CreateDay();
         day.AddPunch(At(9, 0), "", TimeSpan.Zero, force: true);
         day.AddPunch(At(18, 0), "", TimeSpan.Zero, force: true);
 
-        Assert.Equal(0, day.CalculateExtensionMinutes());
+        Assert.Equal(0, day.CalculateGrantedMinutes());
     }
 
     [Fact]
-    public void CalculateExtensionMinutes_ExtensionBeforePunch()
+    public void CalculateGrantedMinutes_ExtensionBeforePunch()
     {
         var day = CreateDay();
         day.AddPunch(At(9, 0), "", TimeSpan.Zero, force: true);
@@ -208,11 +208,11 @@ public class WorkDayAggregateTests
         day.AddAttendanceRequest("Leave", new TimeRange(new TimeOnly(7, 0), new TimeOnly(9, 0)), null);
 
         // effectiveStart=7:00, effectiveEnd=18:00, totalSpan=660, punchSpan=540, extension=120
-        Assert.Equal(120, day.CalculateExtensionMinutes());
+        Assert.Equal(120, day.CalculateGrantedMinutes());
     }
 
     [Fact]
-    public void CalculateExtensionMinutes_ExtensionAfterPunch()
+    public void CalculateGrantedMinutes_ExtensionAfterPunch()
     {
         var day = CreateDay();
         day.AddPunch(At(9, 0), "", TimeSpan.Zero, force: true);
@@ -220,11 +220,11 @@ public class WorkDayAggregateTests
         day.AddAttendanceRequest("Trip", new TimeRange(new TimeOnly(18, 0), new TimeOnly(20, 0)), null);
 
         // effectiveStart=9:00, effectiveEnd=20:00, totalSpan=660, punchSpan=540, extension=120
-        Assert.Equal(120, day.CalculateExtensionMinutes());
+        Assert.Equal(120, day.CalculateGrantedMinutes());
     }
 
     [Fact]
-    public void CalculateExtensionMinutes_ExtensionBothSides()
+    public void CalculateGrantedMinutes_ExtensionBothSides()
     {
         var day = CreateDay();
         day.AddPunch(At(9, 0), "", TimeSpan.Zero, force: true);
@@ -233,21 +233,21 @@ public class WorkDayAggregateTests
         day.AddAttendanceRequest("Trip", new TimeRange(new TimeOnly(18, 0), new TimeOnly(20, 0)), null);
 
         // effectiveStart=7:00, effectiveEnd=20:00, totalSpan=780, punchSpan=540, extension=240
-        Assert.Equal(240, day.CalculateExtensionMinutes());
+        Assert.Equal(240, day.CalculateGrantedMinutes());
     }
 
     [Fact]
-    public void CalculateExtensionMinutes_NoPunches_OnlyRequests()
+    public void CalculateGrantedMinutes_NoPunches_OnlyRequests()
     {
         var day = CreateDay();
         day.AddAttendanceRequest("Holiday", new TimeRange(new TimeOnly(9, 0), new TimeOnly(18, 0)), null);
 
         // No punch span, entire range = 540 minutes
-        Assert.Equal(540, day.CalculateExtensionMinutes());
+        Assert.Equal(540, day.CalculateGrantedMinutes());
     }
 
     [Fact]
-    public void CalculateExtensionMinutes_OnePunch_WithRequest()
+    public void CalculateGrantedMinutes_OnePunch_WithRequest()
     {
         var day = CreateDay();
         day.AddPunch(At(9, 0), "", TimeSpan.Zero, force: true);
@@ -255,7 +255,7 @@ public class WorkDayAggregateTests
         day.AddAttendanceRequest("Leave", new TimeRange(new TimeOnly(9, 0), new TimeOnly(18, 0)), null);
 
         // hasPunchSpan=false, hasRequests=true => extension = 540
-        Assert.Equal(540, day.CalculateExtensionMinutes());
+        Assert.Equal(540, day.CalculateGrantedMinutes());
     }
 
     [Fact]

@@ -15,8 +15,8 @@ public class WorkRulesTests
         var facts = Facts(planned, worked: planned + 200, credited: 0, flexEligible: planned + 200);
 
         var d = WorkRules.ComputeDay(facts);
-        Assert.Equal(200, d.DeltaMinutes);
-        Assert.Equal(55, d.FlexDeltaMinutes);
+        Assert.Equal(200, d.AttendanceDeltaMinutes);
+        Assert.Equal(55, d.FlexBankDeltaMinutes);
     }
 
     [Fact]
@@ -26,15 +26,15 @@ public class WorkRulesTests
         var facts = Facts(planned, worked: planned - 200, credited: 0, flexEligible: planned - 200);
 
         var d = WorkRules.ComputeDay(facts);
-        Assert.Equal(-200, d.DeltaMinutes);
-        Assert.Equal(-55, d.FlexDeltaMinutes); // 單日消耗上限 -55
+        Assert.Equal(-200, d.AttendanceDeltaMinutes);
+        Assert.Equal(-55, d.FlexBankDeltaMinutes); // 單日消耗上限 -55
     }
 
     [Fact]
     public void NonWorkingDay_DoesNotAffectFlex()
     {
         var d = WorkRules.ComputeDay(Facts(planned: 0, worked: 999, credited: 0, flexEligible: 999));
-        Assert.Equal(0, d.FlexDeltaMinutes);
+        Assert.Equal(0, d.FlexBankDeltaMinutes);
     }
 
     [Fact]
@@ -42,8 +42,8 @@ public class WorkRulesTests
     {
         var d = WorkRules.ComputeDay(Facts(planned: 540, worked: 600, credited: 0, flexEligible: 570));
 
-        Assert.Equal(60, d.DeltaMinutes);
-        Assert.Equal(30, d.FlexDeltaMinutes);
+        Assert.Equal(60, d.AttendanceDeltaMinutes);
+        Assert.Equal(30, d.FlexBankDeltaMinutes);
     }
 
     [Fact]
@@ -51,8 +51,8 @@ public class WorkRulesTests
     {
         var d = WorkRules.ComputeDay(Facts(planned: 540, worked: 605, credited: 0, flexEligible: 570));
 
-        Assert.Equal(65, d.DeltaMinutes);
-        Assert.Equal(30, d.FlexDeltaMinutes);
+        Assert.Equal(65, d.AttendanceDeltaMinutes);
+        Assert.Equal(30, d.FlexBankDeltaMinutes);
     }
 
     [Fact]
@@ -61,7 +61,7 @@ public class WorkRulesTests
         var d = WorkRules.ComputeDay(Facts(planned: 540, worked: 540, credited: 0, flexEligible: 510));
         var m = WorkRules.ComputeMonth([new DatedWorkSummary(new DateOnly(2026, 4, 1), d)]);
 
-        Assert.Equal(-30, d.FlexDeltaMinutes);
+        Assert.Equal(-30, d.FlexBankDeltaMinutes);
         Assert.Equal(30, m.TotalDeficitMinutes);
         Assert.Equal(30, m.Days[0].DeficitMinutes);
     }
