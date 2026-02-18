@@ -101,18 +101,17 @@ public sealed class WorkDay : BaseEntity<int>
     public int CalculateExtensionMinutes()
     {
         var punchSpan = GetPunchSpan();
-        if (punchSpan is null && _attendanceRequests.Count == 0) return 0;
-
         var allRanges = _attendanceRequests.Select(r => r.Range).ToList();
-        if (punchSpan is not null) allRanges.Add(punchSpan.Value);
 
-        var effectiveStart = allRanges.Min(r => r.Start);
-        var effectiveEnd = allRanges.Max(r => r.End);
-        var totalSpan = (effectiveEnd - effectiveStart).TotalMinutes;
+        if (punchSpan is null && allRanges.Count == 0) return 0;
+        if (punchSpan is null) return (int)allRanges.Span().TotalMinutes;
 
-        return punchSpan is not null
-            ? (int)(totalSpan - punchSpan.Value.Duration.TotalMinutes)
-            : (int)totalSpan;
+        allRanges.Add(punchSpan.Value);
+
+        var totalMinutes = allRanges.Span().TotalMinutes;
+        var punchMinutes = punchSpan.Value.Duration.TotalMinutes;
+
+        return (int)(totalMinutes - punchMinutes);
     }
 
     private Result ValidateNoOverlap(TimeRange range, int? excludeId)
@@ -141,7 +140,7 @@ public sealed class WorkDay : BaseEntity<int>
             segments.Add(r.Range);
         }
 
-        return TimeRange.HasGaps(segments)
+        return segments.HasGaps()
             ? Errors.WorkDay.HasGap
             : Result.Ok();
     }
