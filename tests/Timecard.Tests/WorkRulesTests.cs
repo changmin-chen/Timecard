@@ -20,14 +20,14 @@ public class WorkRulesTests
     }
 
     [Fact]
-    public void Workday_NegativeFlex_NotCapped()
+    public void Workday_NegativeFlex_CapsAt55()
     {
         var planned = WorkRules.PlannedMinutesPerWorkDay;
         var facts = Facts(planned, worked: planned - 200, credited: 0, flexEligible: planned - 200);
 
         var d = WorkRules.ComputeDay(facts);
         Assert.Equal(-200, d.DeltaMinutes);
-        Assert.Equal(-200, d.FlexDeltaMinutes); // 消耗不限制
+        Assert.Equal(-55, d.FlexDeltaMinutes); // 單日消耗上限 -55
     }
 
     [Fact]
@@ -69,18 +69,18 @@ public class WorkRulesTests
     [Fact]
     public void Month_FlexCannotGoBelowZero_DeficitReported()
     {
-        // d1(2/1): flex +55, bank 55
-        // d2(2/2): flex -60, used 55, deficit 5, bank 0
-        // d3(2/3): flex -60, used 0, deficit 60, bank 0
+        // d1(2/1): flex +55 (capped), bank 55
+        // d2(2/2): flex -55 (capped from -60), used 55, deficit 0, bank 0
+        // d3(2/3): flex -55 (capped from -60), used 0, deficit 55, bank 0
         var d1 = new DatedWorkSummary(new DateOnly(2026, 2, 1), WorkRules.ComputeDay(Facts(540, worked: 600, credited: 0, flexEligible: 600)));
         var d2 = new DatedWorkSummary(new DateOnly(2026, 2, 2), WorkRules.ComputeDay(Facts(540, worked: 480, credited: 0, flexEligible: 480)));
         var d3 = new DatedWorkSummary(new DateOnly(2026, 2, 3), WorkRules.ComputeDay(Facts(540, worked: 480, credited: 0, flexEligible: 480)));
 
         var m = WorkRules.ComputeMonth(new[] { d2, d3, d1 }); // 故意亂序，驗證排序
-        Assert.Equal(5, m.Days[1].DeficitMinutes);   // d2: deficit 5
-        Assert.Equal(60, m.Days[2].DeficitMinutes);  // d3: deficit 60
+        Assert.Equal(0, m.Days[1].DeficitMinutes);   // d2: 消耗 55 = bank，deficit 0
+        Assert.Equal(55, m.Days[2].DeficitMinutes);  // d3: bank 已空，deficit 55
         Assert.Equal(0, m.FlexBankBalance);
-        Assert.Equal(65, m.TotalDeficitMinutes);
+        Assert.Equal(55, m.TotalDeficitMinutes);
     }
 
     [Fact]

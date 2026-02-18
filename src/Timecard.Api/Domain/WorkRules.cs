@@ -16,7 +16,7 @@ public static class WorkRules
 
     /// <summary>
     /// 結算單日工時。
-    /// FlexDelta 依「可累積彈性分鐘 - planned」計算，正值上限 +55，負值不限；
+    /// FlexDelta 依「可累積彈性分鐘 - planned」計算，正值上限 +55，負值下限 -55；
     /// 免上班日固定為 0。
     /// </summary>
     public static DailyWorkSummary ComputeDay(DailySettlementFacts facts)
@@ -26,8 +26,8 @@ public static class WorkRules
         var flexCandidate = facts.FlexEligiblePunchMinutes - facts.PlannedMinutes;
 
         // 免上班日：不累積也不使用彈性（避免「放假還賺彈性」）
-        // 上班日：正值上限 +55（避免單日過度累積），負值不限（允許全額消耗）
-        var flexDelta = facts.PlannedMinutes == 0 ? 0 : Math.Min(flexCandidate, DailyFlexCapMinutes);
+        // 上班日：±55 分鐘上限（累積與單日消耗皆受限，避免暴衝或一次大量提領）
+        var flexDelta = facts.PlannedMinutes == 0 ? 0 : Math.Clamp(flexCandidate, -DailyFlexCapMinutes, DailyFlexCapMinutes);
 
         return new DailyWorkSummary(facts.PlannedMinutes, facts.WorkedMinutes, facts.CreditedMinutes, effective, delta, flexDelta);
     }
