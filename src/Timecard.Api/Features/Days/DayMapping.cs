@@ -13,13 +13,10 @@ public static class DayMapping
         var isNonWorking = !calendarDay.IsWorking;
         var note = calendarDay.Note;
 
-        var planned = isNonWorking ? 0 : WorkRules.PlannedMinutesPerWorkDay;
-
         var punches = day?.Punches.OrderBy(p => p.At).ToList() ?? [];
-        var (start, end, worked) = day?.DeriveSpan() ?? (null, null, 0);
-
-        var extension = day?.CalculateExtensionMinutes() ?? 0;
-        var computed = WorkRules.ComputeDay(planned, worked, extension);
+        var (start, end, _) = day?.DeriveSpan() ?? (null, null, 0);
+        var facts = day.ToDailySettlementFacts(isWorkingDay: !isNonWorking);
+        var computed = WorkRules.ComputeDay(facts);
 
         return new DayDto(
         Date: date.ToString("yyyy-MM-dd"),

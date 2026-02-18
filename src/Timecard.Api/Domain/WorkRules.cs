@@ -4,27 +4,32 @@ namespace Timecard.Api.Domain;
 /// 工時計算規則：
 /// 1) 每天標準工時 9 小時（540 分鐘，含午休）
 /// 2) 每日彈性累積上限 +55 分鐘；消耗（不足）則不設上限
-/// 3) 彈性時數按月累積，月底重置
+/// 3) 彈性累積僅來自 PunchSpan 且只計 07:30~19:00 內的分鐘
+/// 4) 彈性時數按月累積，月底重置
 /// </summary>
 public static class WorkRules
 {
     public const int PlannedMinutesPerWorkDay = 9 * 60;
     public const int DailyFlexCapMinutes = 55;
+    public static readonly TimeOnly FlexWindowStart = new(7, 30);
+    public static readonly TimeOnly FlexWindowEnd = new(19, 0);
 
     /// <summary>
-    /// 結算單日工時。超時累積上限 +55 分鐘，不足則全額認列（無下限）。
-    /// 免上班日不累積也不消耗彈性。
+    /// 結算單日工時。
+    /// FlexDelta 依「可累積彈性分鐘 - planned」計算，正值上限 +55，負值不限；
+    /// 免上班日固定為 0。
     /// </summary>
-    public static DailyWorkSummary ComputeDay(int plannedMinutes, int workedMinutes, int creditedMinutes)
+    public static DailyWorkSummary ComputeDay(DailySettlementFacts facts)
     {
-        var effective = workedMinutes + creditedMinutes;
-        var delta = effective - plannedMinutes;
+        var effective = facts.WorkedMinutes + facts.CreditedMinutes;
+        var delta = effective - facts.PlannedMinutes;
+        var flexCandidate = facts.FlexEligiblePunchMinutes - facts.PlannedMinutes;
 
         // 免上班日：不累積也不使用彈性（避免「放假還賺彈性」）
         // 上班日：正值上限 +55（避免單日過度累積），負值不限（允許全額消耗）
-        var flexDelta = plannedMinutes == 0 ? 0 : Math.Min(delta, DailyFlexCapMinutes);
+        var flexDelta = facts.PlannedMinutes == 0 ? 0 : Math.Min(flexCandidate, DailyFlexCapMinutes);
 
-        return new DailyWorkSummary(plannedMinutes, workedMinutes, creditedMinutes, effective, delta, flexDelta);
+        return new DailyWorkSummary(facts.PlannedMinutes, facts.WorkedMinutes, facts.CreditedMinutes, effective, delta, flexDelta);
     }
 
     /// <summary>

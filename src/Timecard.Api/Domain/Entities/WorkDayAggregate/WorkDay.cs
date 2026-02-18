@@ -85,35 +85,6 @@ public sealed class WorkDay : BaseEntity<int>
         return Result.Ok();
     }
 
-    public (DateTimeOffset? Start, DateTimeOffset? End, int WorkedMinutes) DeriveSpan()
-    {
-        var ordered = _punches.OrderBy(p => p.At).ToList();
-        if (ordered.Count == 0) return (null, null, 0);
-
-        var start = ordered[0].At;
-        if (ordered.Count == 1) return (start, null, 0);
-
-        var end = ordered[^1].At;
-        var workedMinutes = (int)Math.Max(0, (end - start).TotalMinutes);
-        return (start, end, workedMinutes);
-    }
-
-    public int CalculateExtensionMinutes()
-    {
-        var punchSpan = GetPunchSpan();
-        var allRanges = _attendanceRequests.Select(r => r.Range).ToList();
-
-        if (punchSpan is null && allRanges.Count == 0) return 0;
-        if (punchSpan is null) return (int)allRanges.Span().TotalMinutes;
-
-        allRanges.Add(punchSpan.Value);
-
-        var totalMinutes = allRanges.Span().TotalMinutes;
-        var punchMinutes = punchSpan.Value.Duration.TotalMinutes;
-
-        return (int)(totalMinutes - punchMinutes);
-    }
-
     private Result ValidateNoOverlap(TimeRange range, int? excludeId)
     {
         foreach (var existing in _attendanceRequests)

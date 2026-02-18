@@ -259,6 +259,36 @@ public class WorkDayAggregateTests
     }
 
     [Fact]
+    public void CalculateFlexEligiblePunchMinutes_ClampsToFlexWindow()
+    {
+        var day = CreateDay();
+        day.AddPunch(At(9, 30), "", TimeSpan.Zero, force: true);
+        day.AddPunch(At(19, 30), "", TimeSpan.Zero, force: true);
+
+        Assert.Equal(570, day.CalculateFlexEligiblePunchMinutes());
+    }
+
+    [Fact]
+    public void CalculateFlexEligiblePunchMinutes_OnePunch_ReturnsZero()
+    {
+        var day = CreateDay();
+        day.AddPunch(At(9, 30), "", TimeSpan.Zero, force: true);
+
+        Assert.Equal(0, day.CalculateFlexEligiblePunchMinutes());
+    }
+
+    [Fact]
+    public void CalculateFlexEligiblePunchMinutes_AttendanceRequestDoesNotAffectResult()
+    {
+        var day = CreateDay();
+        day.AddPunch(At(9, 30), "", TimeSpan.Zero, force: true);
+        day.AddPunch(At(19, 35), "", TimeSpan.Zero, force: true);
+        day.AddAttendanceRequest("Overtime", new TimeRange(new TimeOnly(19, 0), new TimeOnly(19, 30)), null);
+
+        Assert.Equal(570, day.CalculateFlexEligiblePunchMinutes());
+    }
+
+    [Fact]
     public void RemoveAttendanceRequest_Succeeds()
     {
         var day = CreateDay();

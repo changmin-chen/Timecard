@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Domain;
+using Timecard.Api.Domain.Entities.WorkDayAggregate;
 using Timecard.Api.Features.Calendar;
 using Timecard.Api.Features.Shared;
 using Timecard.Api.Infrastructure.Data;
@@ -54,11 +55,8 @@ public static class MonthEndpoints
         var computedForMonth = allDates.Select(date =>
         {
             workDayMap.TryGetValue(date, out var day);
-            var isNonWorking = !calendarDays[date].IsWorking;
-            var planned = isNonWorking ? 0 : WorkRules.PlannedMinutesPerWorkDay;
-            var (_, _, worked) = day?.DeriveSpan() ?? (null, null, 0);
-            var extension = day?.CalculateExtensionMinutes() ?? 0;
-            var computed = WorkRules.ComputeDay(planned, worked, extension);
+            var facts = day.ToDailySettlementFacts(isWorkingDay: calendarDays[date].IsWorking);
+            var computed = WorkRules.ComputeDay(facts);
             return new DatedWorkSummary(date, computed);
         });
 
