@@ -2,25 +2,23 @@ using Timecard.Api.Domain.Results;
 
 namespace Timecard.Api.Domain.Entities.WorkDayAggregate;
 
-public readonly record struct TimeRange // Value Object
+/// <summary>
+/// Value Object representing a time range. End should always be after and not touching Start.
+/// </summary>
+public readonly record struct TimeRange
 {
-    public TimeOnly Start { get; }
+    public TimeOnly Start { get; } 
     public TimeOnly End { get; }
+    
+    public TimeSpan Duration => End - Start;
+    
 
     public TimeRange(TimeOnly start, TimeOnly end)
     {
-        if (end <= start)
-            throw new ArgumentException("End must be after Start.");
+        if (end <= start) throw new ArgumentException("End must be after Start.");
+        
         Start = start;
         End = end;
-    }
-
-    public static Result<TimeRange> Create(TimeOnly start, TimeOnly end)
-    {
-        if (end <= start)
-            return Errors.WorkDay.StartBeforeEnd;
-
-        return new TimeRange(start, end);
     }
 
     /// <summary>True when two ranges overlap (touching endpoints excluded).</summary>
@@ -81,8 +79,15 @@ public readonly record struct TimeRange // Value Object
 
         return false;
     }
-
-    public TimeSpan Duration => End - Start;
-
+    
     public override string ToString() => $"{Start:HH:mm} ~ {End:HH:mm}";
+}
+
+public static class TimeRangeCreation
+{
+    extension(TimeRange)
+    {
+        public static Result<TimeRange> Create(TimeOnly start, TimeOnly end) =>
+            end > start ? new TimeRange(start, end) : Errors.WorkDay.StartBeforeEnd;
+    }
 }

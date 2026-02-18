@@ -52,8 +52,16 @@ public sealed class TimecardDb(DbContextOptions<TimecardDb> options) : DbContext
             e.Property(x => x.Category).HasMaxLength(64);
             e.Property(x => x.Note).HasMaxLength(4000);
             e.Property(x => x.WorkDayId);
-            e.Property(x => x.Start).HasColumnType("time without time zone");
-            e.Property(x => x.End).HasColumnType("time without time zone");
+
+            e.ComplexProperty(x => x.Range, b => {
+                b.Property(p => p.Start)
+                    .HasColumnName("Start")
+                    .HasColumnType("time without time zone");
+                b.Property(p => p.End)
+                    .HasColumnName("End")
+                    .HasColumnType("time without time zone");
+            });
+            
             e.HasIndex(x => new { x.WorkDayId, x.Category });
 
             // Keep bad data out of the DB.
