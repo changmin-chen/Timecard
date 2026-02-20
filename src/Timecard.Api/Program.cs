@@ -1,7 +1,9 @@
 using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Timecard.Api.Domain.Entities;
 using Timecard.Api.Features.AttendanceRequests;
+using Timecard.Api.Features.Auth;
 using Timecard.Api.Features.Calendar;
 using Timecard.Api.Features.Days;
 using Timecard.Api.Features.Month;
@@ -23,6 +25,7 @@ builder.Services.AddDbContext<TimecardDb>(opt =>
     opt.UseNpgsql(cs);
 });
 
+builder.Services.AddScoped<ICurrentUser, DevCurrentUser>();
 builder.Services.AddScoped<WorkDayRepository>();
 builder.Services.AddScoped<IWorkCalendar, EfWorkCalendar>();
 builder.Services.AddScoped<DgpaCalendarImporter>();
@@ -47,6 +50,19 @@ var app = builder.Build();
 
     await db.Database.MigrateAsync();
     await seeder.SeedAsync();
+
+    // Phase 1: ensure the dev placeholder user exists.
+    // Removed in Phase 2 when real auth is in place.
+    if (await db.Users.FindAsync(DevCurrentUser.Id) is null)
+    {
+        db.Users.Add(new AppUser
+        {
+            Id = DevCurrentUser.Id,
+            Email = "dev@placeholder.local",
+            DisplayName = "Dev User",
+        });
+        await db.SaveChangesAsync();
+    }
 }
 
 app.UseExceptionHandler();

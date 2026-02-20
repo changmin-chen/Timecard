@@ -1,5 +1,6 @@
-﻿using Timecard.Api.Domain.Entities.WorkDayAggregate;
+using Timecard.Api.Domain.Entities.WorkDayAggregate;
 using Timecard.Api.Domain.Results;
+using Timecard.Api.Features.Auth;
 using Timecard.Api.Features.Calendar;
 using Timecard.Api.Features.Days;
 using Timecard.Api.Features.Shared;
@@ -25,7 +26,7 @@ public static class AttendanceRequestEndpoints
     public sealed record AttendanceRequestCreate(string Date, string Category, string Start, string End, string? Note);
     public sealed record AttendanceRequestUpdate(string Category, string Start, string End, string? Note);
 
-    private static async Task<IResult> Create(WorkDayRepository repo, IWorkCalendar calendar, AttendanceRequestCreate req, HttpContext http, CancellationToken ct)
+    private static async Task<IResult> Create(WorkDayRepository repo, IWorkCalendar calendar, ICurrentUser currentUser, AttendanceRequestCreate req, HttpContext http, CancellationToken ct)
     {
         if (!DateOnly.TryParse(req.Date, out var d))
             return Results.BadRequest(new { error = "Invalid date. Use yyyy-MM-dd." });
@@ -40,7 +41,7 @@ public static class AttendanceRequestEndpoints
         if (!calendarResult.IsSuccess) return calendarResult.Error!.ToProblem(http);
         var calendarDay = calendarResult.Value!;
 
-        var day = await repo.GetOrCreateDay(d, ct);
+        var day = await repo.GetOrCreateDay(currentUser.UserId, d, ct);
 
         var rangeResult = TimeRange.Create(start, end);
         if (!rangeResult.IsSuccess) return rangeResult.Error!.ToProblem(http);
@@ -52,7 +53,7 @@ public static class AttendanceRequestEndpoints
         return Results.Ok(DayMapping.ToDayResponse(day, calendarDay));
     }
 
-    private static async Task<IResult> Update(WorkDayRepository repo, IWorkCalendar calendar, int id, AttendanceRequestUpdate req, HttpContext http, CancellationToken ct)
+    private static async Task<IResult> Update(WorkDayRepository repo, IWorkCalendar calendar, ICurrentUser currentUser, int id, AttendanceRequestUpdate req, HttpContext http, CancellationToken ct)
     {
         if (!TimeOnly.TryParse(req.Start, out var start))
             return Results.BadRequest(new { error = "Invalid start time. Use HH:mm." });
@@ -60,7 +61,7 @@ public static class AttendanceRequestEndpoints
         if (!TimeOnly.TryParse(req.End, out var end))
             return Results.BadRequest(new { error = "Invalid end time. Use HH:mm." });
 
-        var day = await repo.LoadByAttendanceRequestId(id, ct);
+        var day = await repo.LoadByAttendanceRequestId(currentUser.UserId, id, ct);
         if (day is null) return Results.NotFound();
 
         var calendarResult = await calendar.GetRequiredDayAsync(CalendarId, day.Date, ct);
@@ -77,9 +78,9 @@ public static class AttendanceRequestEndpoints
         return Results.Ok(DayMapping.ToDayResponse(day, calendarDay));
     }
 
-    private static async Task<IResult> Delete(WorkDayRepository repo, IWorkCalendar calendar, int id, HttpContext http, CancellationToken ct)
+    private static async Task<IResult> Delete(WorkDayRepository repo, IWorkCalendar calendar, ICurrentUser currentUser, int id, HttpContext http, CancellationToken ct)
     {
-        var day = await repo.LoadByAttendanceRequestId(id, ct);
+        var day = await repo.LoadByAttendanceRequestId(currentUser.UserId, id, ct);
         if (day is null) return Results.NotFound();
 
         var calendarResult = await calendar.GetRequiredDayAsync(CalendarId, day.Date, ct);

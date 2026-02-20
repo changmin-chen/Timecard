@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Timecard.Api.Infrastructure.Data;
@@ -12,9 +13,11 @@ using Timecard.Api.Infrastructure.Data;
 namespace Timecard.Api.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(TimecardDb))]
-    partial class TimecardDbModelSnapshot : ModelSnapshot
+    [Migration("20260220154909_AddUserIsolation")]
+    partial class AddUserIsolation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -22,6 +25,36 @@ namespace Timecard.Api.Infrastructure.Data.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Timecard.Api.Domain.Entities.AppUser", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("EmployeeId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("EmployeeId");
+
+                    b.ToTable("Users");
+                });
 
             modelBuilder.Entity("Timecard.Api.Domain.Entities.CalendarDay", b =>
                 {
@@ -178,9 +211,14 @@ namespace Timecard.Api.Infrastructure.Data.Migrations
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Date")
+                    b.HasIndex("UserId", "Date")
                         .IsUnique();
 
                     b.ToTable("WorkDays");
@@ -200,6 +238,15 @@ namespace Timecard.Api.Infrastructure.Data.Migrations
                     b.HasOne("Timecard.Api.Domain.Entities.WorkDayAggregate.WorkDay", null)
                         .WithMany("Punches")
                         .HasForeignKey("WorkDayId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Timecard.Api.Domain.Entities.WorkDayAggregate.WorkDay", b =>
+                {
+                    b.HasOne("Timecard.Api.Domain.Entities.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
