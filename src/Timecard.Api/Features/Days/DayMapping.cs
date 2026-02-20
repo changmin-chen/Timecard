@@ -21,7 +21,7 @@ public static class DayMapping
         var (start, end) = day?.GetPunchTimestamps() ?? (null, null);
         var facts = day is not null
             ? DailySettlementFacts.FromWorkday(day, isWorkingDay: !isNonWorking) 
-            : DailySettlementFacts.ForAbsence(date, isWorkingDay: !isNonWorking);
+            : DailySettlementFacts.FromAbsence(date, isWorkingDay: !isNonWorking);
         var computed = FlexTimePolicy.ComputeDay(facts);
 
         return new DayResponse(

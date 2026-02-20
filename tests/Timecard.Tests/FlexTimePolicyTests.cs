@@ -76,8 +76,8 @@ public class FlexTimePolicyTests
         var d3 = FlexTimePolicy.ComputeDay(Facts(540, punch: 420, eligible: 420, new DateOnly(2026, 2, 3)));
 
         var m = FlexTimePolicy.ComputeMonth([d2, d3, d1]); // 故意亂序，驗證排序
-        Assert.Equal(5, m.Days[1].Summary.DeficitMinutes);   // d2: 消耗 55 = bank，超額 deficit 5
-        Assert.Equal(65, m.Days[2].Summary.DeficitMinutes);  // d3: bank -55，deficit 65
+        Assert.Equal(5, m.Days[1].DeficitMinutes);   // d2: 消耗 55 = bank，超額 deficit 5
+        Assert.Equal(65, m.Days[2].DeficitMinutes);  // d3: bank -55，deficit 65
         Assert.Equal(-55, m.TotalFlexBankMinutes);
         Assert.Equal(70, m.TotalDeficitMinutes);
     }

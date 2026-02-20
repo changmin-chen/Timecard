@@ -32,7 +32,7 @@ public sealed record DailySettlementFacts(
     /// <summary>
     /// 員工缺勤（無出勤紀錄）時建立結算事實，打卡與認列分鐘數均為 0。
     /// </summary>
-    public static DailySettlementFacts ForAbsence(DateOnly date, bool isWorkingDay)
+    public static DailySettlementFacts FromAbsence(DateOnly date, bool isWorkingDay)
     {
         var plannedMinutes = isWorkingDay ? FlexTimePolicy.PlannedMinutesPerWorkDay : 0;
 

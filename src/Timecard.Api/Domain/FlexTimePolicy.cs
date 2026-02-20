@@ -38,20 +38,8 @@ public static class FlexTimePolicy
     public static MonthlyFlexReport ComputeMonth(IEnumerable<DailyWorkSummary> daysInAnyOrder)
     {
         var days = daysInAnyOrder.OrderBy(d => d.Date).ToList();
-        var bank = 0;
-        var results = days.Select(d => AccumulateFlex(d, ref bank)).ToList();
-        var totalDeficit = results.Sum(d => d.Summary.DeficitMinutes);
-        return new MonthlyFlexReport(results, TotalFlexBankMinutes: bank, TotalDeficitMinutes: totalDeficit);
-    }
-
-    /// <summary>處理單日的彈性存提，更新銀行餘額，餘額可為負值。</summary>
-    private static DailyFlexReport AccumulateFlex(DailyWorkSummary d, ref int flexBank)
-    {
-        if (d.PlannedMinutes == 0)
-            return new DailyFlexReport(d, FlexBankMinutes: flexBank);
-
-        flexBank += d.FlexDeltaMinutes;
-
-        return new DailyFlexReport(d, FlexBankMinutes: flexBank);
+        var totalFlex = days.Where(d => d.PlannedMinutes != 0).Sum(d => d.FlexDeltaMinutes);
+        var totalDeficit = days.Sum(d => d.DeficitMinutes);
+        return new MonthlyFlexReport(days, TotalFlexBankMinutes: totalFlex, TotalDeficitMinutes: totalDeficit);
     }
 }

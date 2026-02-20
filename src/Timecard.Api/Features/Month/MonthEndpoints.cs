@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Domain;
+using Timecard.Api.Domain.Entities.WorkDayAggregate;
 using Timecard.Api.Features.Calendar;
 using Timecard.Api.Features.Shared;
 using Timecard.Api.Infrastructure.Data;
@@ -25,7 +26,7 @@ public static class MonthEndpoints
         var start = new DateOnly(year, month, 1);
         var endExclusive = start.AddMonths(1);
 
-        var workDays = await db.WorkDays
+        List<WorkDay> workDays = await db.WorkDays
             .AsNoTracking()
             .Where(d => d.Date >= start && d.Date < endExclusive)
             .Include(d => d.Punches)
@@ -33,56 +34,46 @@ public static class MonthEndpoints
             .ToListAsync(ct);
 
         var workDayMap = workDays.ToDictionary(d => d.Date);
-        var existingDates = workDays.Select(d => d.Date).ToHashSet();
-
-        List<DateOnly> allDates;
-        if (!includeEmpty)
-        {
-            allDates = workDays.Select(d => d.Date).OrderBy(d => d).ToList();
-        }
-        else
-        {
-            allDates = [];
-            for (var d = start; d < endExclusive; d = d.AddDays(1))
-                allDates.Add(d);
-        }
 
         var calendarResult = await calendar.GetRequiredDaysAsync(CalendarId, start, endExclusive, ct);
         if (!calendarResult.IsSuccess) return calendarResult.Error!.ToProblem(http);
         var calendarDays = calendarResult.Value!;
 
-        var computedForMonth = allDates.Select(date => {
-            workDayMap.TryGetValue(date, out var day);
-            bool isWorkingDay = calendarDays[date].IsWorking;
+        IEnumerable<DateOnly> dates = includeEmpty
+            ? Enumerable.Range(0, endExclusive.DayNumber - start.DayNumber).Select(i => start.AddDays(i))
+            : workDays.Select(d => d.Date);
 
+        var dailySummaries = dates.Select(date =>
+        {
+            workDayMap.TryGetValue(date, out var day);
+            bool isWorking = calendarDays[date].IsWorking;
             var facts = day is not null
-                ? DailySettlementFacts.FromWorkday(day, isWorkingDay: calendarDays[date].IsWorking)
-                : DailySettlementFacts.ForAbsence(date, isWorkingDay);
+                ? DailySettlementFacts.FromWorkday(day, isWorking)
+                : DailySettlementFacts.FromAbsence(date, isWorking);
             return FlexTimePolicy.ComputeDay(facts);
         });
 
-        var monthReport = FlexTimePolicy.ComputeMonth(computedForMonth);
+        var monthReport = FlexTimePolicy.ComputeMonth(dailySummaries);
 
-        var dtoDays = monthReport.Days.Select(d => {
-            var exists = existingDates.Contains(d.Date);
-            workDayMap.TryGetValue(d.Date, out var src);
-            var calendarDay = calendarDays[d.Date];
-
+        var dtoDays = monthReport.Days.Select(d =>
+        {
+            workDayMap.TryGetValue(d.Date, out WorkDay? src);
+            ResolvedCalendarDay calendarDay = calendarDays[d.Date];
+            
             return new MonthDayDto(
-            Date: d.Date.ToString("yyyy-MM-dd"),
-            Exists: exists,
-            IsNonWorkingDay: !calendarDay.IsWorking,
-            Note: calendarDay.Note,
-            CalendarKind: calendarDay.Kind,
-            CalendarSource: calendarDay.Source,
-            PunchCount: src?.Punches.Count ?? 0,
-            PlannedMinutes: d.Summary.PlannedMinutes,
-            PunchedMinutes: d.Summary.PunchedMinutes,
-            EligibleMinutes: d.Summary.EligibleMinutes,
-            EligibleDeltaMinutes: d.Summary.EligibleDeltaMinutes,
-            FlexDeltaMinutes: d.Summary.FlexDeltaMinutes,
-            FlexBankMinutes: d.FlexBankMinutes,
-            DeficitMinutes: d.Summary.DeficitMinutes
+                Date: d.Date.ToString("yyyy-MM-dd"),
+                Exists: src is not null,
+                IsNonWorkingDay: !calendarDay.IsWorking,
+                Note: calendarDay.Note,
+                CalendarKind: calendarDay.Kind,
+                CalendarSource: calendarDay.Source,
+                PunchCount: src?.Punches.Count ?? 0,
+                PlannedMinutes: d.PlannedMinutes,
+                PunchedMinutes: d.PunchedMinutes,
+                EligibleMinutes: d.EligibleMinutes,
+                EligibleDeltaMinutes: d.EligibleDeltaMinutes,
+                FlexDeltaMinutes: d.FlexDeltaMinutes,
+                DeficitMinutes: d.DeficitMinutes
             );
         }).ToList();
 

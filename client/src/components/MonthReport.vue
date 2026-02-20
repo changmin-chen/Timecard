@@ -132,7 +132,6 @@ const totalWorkDays = computed(() => {
                         <th>出勤</th>
                         <th>差額</th>
                         <th>彈性套用</th>
-                        <th v-if="showDetail">彈性累加</th>
                         <th>不足</th>
                         <th v-if="showDetail">打卡</th>
                         <th>備註</th>
@@ -148,7 +147,6 @@ const totalWorkDays = computed(() => {
                             }}
                         </td>
                         <td class="mono">{{ mins(d.flexDeltaMinutes) }}</td>
-                        <td v-if="showDetail" class="mono">{{ d.flexBankMinutes }}</td>
                         <td class="mono" :class="deficitCls(d.deficitMinutes)">
                             {{ isFuture(d.date) ? '\u2014' : (d.deficitMinutes ? d.deficitMinutes : '') }}
                         </td>

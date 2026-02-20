@@ -14,7 +14,6 @@ public sealed record MonthDayDto(
     int EligibleMinutes,
     int EligibleDeltaMinutes,
     int FlexDeltaMinutes,
-    int FlexBankMinutes,
     int DeficitMinutes
 );
 
