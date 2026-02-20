@@ -14,7 +14,7 @@ public static class DayMapping
         var note = calendarDay.Note;
 
         var punches = day?.Punches.OrderBy(p => p.At).ToList() ?? [];
-        var (start, end, _) = day?.DeriveSpan() ?? (null, null, 0);
+        var (start, end, _) = day?.DerivePunchTimestamps() ?? (null, null, 0);
         var facts = DailySettlementFacts.From(day, isWorkingDay: !isNonWorking);
         var computed = WorkRules.ComputeDay(facts);
 

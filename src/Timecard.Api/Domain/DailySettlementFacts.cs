@@ -27,7 +27,7 @@ public sealed record DailySettlementFacts(
         if (day is null)
             return new DailySettlementFacts(plannedMinutes, WorkedMinutes: 0, GrantedMinutes: 0, FlexEligiblePunchMinutes: 0);
 
-        var punchedMinutes = day.DeriveSpan().PunchedMinutes;
+        var punchedMinutes = day.DerivePunchTimestamps().PunchedMinutes;
         var grantedMinutes = day.CalculateGrantedMinutes();
         var flexEligiblePunchMinutes = day.CalculateFlexEligiblePunchMinutes();
 

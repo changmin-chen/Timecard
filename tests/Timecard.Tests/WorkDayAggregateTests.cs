@@ -43,7 +43,7 @@ public class WorkDayAggregateTests
         day.AddPunch(At(9, 0), "", TimeSpan.Zero, force: true);
         day.AddPunch(At(18, 0), "", TimeSpan.Zero, force: true);
 
-        var span = day.DeriveSpan();
+        var span = day.DerivePunchTimestamps();
 
         Assert.Equal(540, span.PunchedMinutes);
         Assert.NotNull(span.Start);

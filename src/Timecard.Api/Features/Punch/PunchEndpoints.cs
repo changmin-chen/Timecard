@@ -1,4 +1,4 @@
-using Timecard.Api.Domain.Entities.WorkDayAggregate;
+﻿using Timecard.Api.Domain.Entities.WorkDayAggregate;
 using Timecard.Api.Domain.Results;
 using Timecard.Api.Features.Calendar;
 using Timecard.Api.Features.Days;
@@ -67,7 +67,7 @@ public static class PunchEndpoints
         var day = await repo.LoadDay(d, ct);
 
         var punches = day?.Punches.OrderBy(p => p.At).ToList() ?? [];
-        var (start, end, worked) = day?.DeriveSpan() ?? (null, null, 0);
+        var (start, end, worked) = day?.DerivePunchTimestamps() ?? (null, null, 0);
 
         return Results.Ok(new
         {

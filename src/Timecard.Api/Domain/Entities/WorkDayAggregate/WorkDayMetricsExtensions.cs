@@ -8,7 +8,7 @@ public static class WorkDayMetricsExtensions
 
     extension(WorkDay day)
     {
-        public (DateTimeOffset? Start, DateTimeOffset? End, int PunchedMinutes) DeriveSpan()
+        public (DateTimeOffset? Start, DateTimeOffset? End, int PunchedMinutes) DerivePunchTimestamps()
         {
             if (day.Punches.Count == 0)
                 return (null, null, 0);
@@ -25,7 +25,7 @@ public static class WorkDayMetricsExtensions
         
         public int CalculateGrantedMinutes()
         {
-            var punchSpan = GetPunchSpan(day);
+            var punchSpan = DerivePunchTimeRange(day);
             var allRanges = day.AttendanceRequests.Select(r => r.Range).ToList();
 
             if (punchSpan is null && allRanges.Count == 0) return 0;
@@ -41,7 +41,7 @@ public static class WorkDayMetricsExtensions
         
         public int CalculateFlexEligiblePunchMinutes()
         {
-            var punchSpan = GetPunchSpan(day);
+            var punchSpan = DerivePunchTimeRange(day);
             if (punchSpan is null) return 0;
 
             var intersection = punchSpan.Value.TryIntersect(FlexWindow);
@@ -49,9 +49,9 @@ public static class WorkDayMetricsExtensions
         }
     }
 
-    private static TimeRange? GetPunchSpan(WorkDay day)
+    private static TimeRange? DerivePunchTimeRange(WorkDay day)
     {
-        var span = day.DeriveSpan();
+        var span = day.DerivePunchTimestamps();
         if (span.Start is null || span.End is null)
             return null;
 
