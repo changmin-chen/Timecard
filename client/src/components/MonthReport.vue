@@ -125,12 +125,12 @@ const totalWorkDays = computed(() => {
                     <tr v-for="d in month.days" :key="d.date" :class="{ future: isFuture(d.date) }">
                         <td class="mono">{{ fmtDateShort(d.date) }}<span v-if="d.isNonWorkingDay"
                                                                          class="badge"> OFF</span></td>
-                        <td class="mono">{{ d.eligibleMinutes }}/{{ d.plannedMinutes }}</td>
-                        <td class="mono" :class="deltaCls(d.eligibleDeltaMinutes)">{{
-                                mins(d.eligibleDeltaMinutes)
+                        <td class="mono">{{ isFuture(d.date) ? '\u2014' : `${d.eligibleMinutes}/${d.plannedMinutes}` }}</td>
+                        <td class="mono" :class="isFuture(d.date) ? '' : deltaCls(d.eligibleDeltaMinutes)">{{
+                                isFuture(d.date) ? '\u2014' : mins(d.eligibleDeltaMinutes)
                             }}
                         </td>
-                        <td class="mono">{{ mins(d.flexDeltaMinutes) }}</td>
+                        <td class="mono">{{ isFuture(d.date) ? '\u2014' : mins(d.flexDeltaMinutes) }}</td>
                         <td class="mono" :class="deficitCls(d.deficitMinutes)">
                             {{ isFuture(d.date) ? '\u2014' : (d.deficitMinutes ? d.deficitMinutes : '') }}
                         </td>
