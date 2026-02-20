@@ -55,11 +55,19 @@ public static class MonthEndpoints
 
         var monthReport = FlexTimePolicy.ComputeMonth(dailySummaries);
 
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var settledFlexBank = monthReport.Days
+            .Where(d => d.Date <= today && d.PlannedMinutes != 0)
+            .Sum(d => d.FlexDeltaMinutes);
+        var settledDeficit = monthReport.Days
+            .Where(d => d.Date <= today)
+            .Sum(d => d.DeficitMinutes);
+
         var dtoDays = monthReport.Days.Select(d =>
         {
             workDayMap.TryGetValue(d.Date, out WorkDay? src);
             ResolvedCalendarDay calendarDay = calendarDays[d.Date];
-            
+
             return new MonthDayDto(
                 Date: d.Date.ToString("yyyy-MM-dd"),
                 Exists: src is not null,
@@ -77,6 +85,6 @@ public static class MonthEndpoints
             );
         }).ToList();
 
-        return Results.Ok(new MonthResponse(Year: year, Month: month, TotalFlexBankBalance: monthReport.TotalFlexBankMinutes, TotalDeficitMinutes: monthReport.TotalDeficitMinutes, Days: dtoDays));
+        return Results.Ok(new MonthResponse(Year: year, Month: month, AsOf: today, SettledFlexBankMinutes: settledFlexBank, SettledDeficitMinutes: settledDeficit, Days: dtoDays));
     }
 }

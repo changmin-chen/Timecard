@@ -37,16 +37,8 @@ function load() {
     loadMonth(y, m, includeEmpty.value)
 }
 
-function todayStr() {
-    const now = new Date()
-    const y = now.getFullYear()
-    const m = String(now.getMonth() + 1).padStart(2, '0')
-    const d = String(now.getDate()).padStart(2, '0')
-    return `${y}-${m}-${d}`
-}
-
 function isFuture(dateStr) {
-    return dateStr > todayStr()
+    return !!month.value && dateStr > month.value.asOf
 }
 
 function fmtDateShort(dateStr) {
@@ -64,14 +56,6 @@ function deltaCls(d) {
 function deficitCls(d) {
     return d > 0 ? 'bad' : ''
 }
-
-const settledDeficit = computed(() => {
-    if (!month.value) return 0
-    const today = todayStr()
-    return month.value.days
-        .filter(d => d.date <= today)
-        .reduce((sum, d) => sum + (d.deficitMinutes || 0), 0)
-})
 
 const attendedDays = computed(() => {
     if (!month.value) return 0
@@ -104,13 +88,13 @@ const totalWorkDays = computed(() => {
         <div v-if="month" class="month-stats">
             <div class="month-stat-card">
                 <span class="month-stat-label">彈性餘額</span>
-                <span class="month-stat-value" :class="deltaCls(month.totalFlexBankBalance)">{{
-                        mins(month.totalFlexBankBalance)
+                <span class="month-stat-value" :class="deltaCls(month.settledFlexBankMinutes)">{{
+                        mins(month.settledFlexBankMinutes)
                     }} 分</span>
             </div>
             <div class="month-stat-card">
                 <span class="month-stat-label">已結算不足</span>
-                <span class="month-stat-value" :class="deficitCls(settledDeficit)">{{ settledDeficit }} 分</span>
+                <span class="month-stat-value" :class="deficitCls(month.settledDeficitMinutes)">{{ month.settledDeficitMinutes }} 分</span>
             </div>
             <div class="month-stat-card">
                 <span class="month-stat-label">出勤天數</span>
