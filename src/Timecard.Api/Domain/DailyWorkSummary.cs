@@ -20,6 +20,6 @@ public sealed record DailyWorkSummary(
     /// <summary>
     /// 出勤分鐘數差額 (正值＝多做、負值＝不足)
     /// </summary>
-    public int AttendanceDeltaMinutes => EligibleMinutes - PlannedMinutes;
+    public int EligibleDeltaMinutes => EligibleMinutes - PlannedMinutes;
 }
 

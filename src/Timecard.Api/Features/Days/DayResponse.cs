@@ -18,7 +18,7 @@ public sealed record DayResponse(
     int PlannedMinutes,
     int PunchedMinutes,
     int EligibleMinutes,
-    int AttendanceDeltaMinutes,
+    int EligibleDeltaMinutes,
     int FlexDeltaMinutes,
 
     IReadOnlyList<PunchDto> Punches,

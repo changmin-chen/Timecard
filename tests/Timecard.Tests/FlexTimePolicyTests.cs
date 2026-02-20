@@ -18,7 +18,7 @@ public class FlexTimePolicyTests
         var facts = Facts(planned, punch: planned + 200, eligible: planned + 200);
 
         var d = FlexTimePolicy.ComputeDay(facts);
-        Assert.Equal(200, d.AttendanceDeltaMinutes);
+        Assert.Equal(200, d.EligibleDeltaMinutes);
         Assert.Equal(55, d.FlexDeltaMinutes);
     }
 
@@ -29,7 +29,7 @@ public class FlexTimePolicyTests
         var facts = Facts(planned, punch: planned - 200, eligible: planned - 200);
 
         var d = FlexTimePolicy.ComputeDay(facts);
-        Assert.Equal(-200, d.AttendanceDeltaMinutes);
+        Assert.Equal(-200, d.EligibleDeltaMinutes);
         Assert.Equal(-55, d.FlexDeltaMinutes); // 單日消耗上限 -55
     }
 

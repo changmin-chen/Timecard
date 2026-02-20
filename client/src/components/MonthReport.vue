@@ -143,8 +143,8 @@ const totalWorkDays = computed(() => {
                         <td class="mono">{{ fmtDateShort(d.date) }}<span v-if="d.isNonWorkingDay"
                                                                          class="badge"> OFF</span></td>
                         <td class="mono">{{ d.eligibleMinutes }}/{{ d.plannedMinutes }}</td>
-                        <td class="mono" :class="deltaCls(d.attendanceDeltaMinutes)">{{
-                                mins(d.attendanceDeltaMinutes)
+                        <td class="mono" :class="deltaCls(d.eligibleDeltaMinutes)">{{
+                                mins(d.eligibleDeltaMinutes)
                             }}
                         </td>
                         <td class="mono">{{ mins(d.flexDeltaMinutes) }}</td>

@@ -37,7 +37,7 @@ public static class DayMapping
         PlannedMinutes: computed.PlannedMinutes,
         PunchedMinutes: computed.PunchedMinutes,
         EligibleMinutes: computed.EligibleMinutes,
-        AttendanceDeltaMinutes: computed.AttendanceDeltaMinutes,
+        EligibleDeltaMinutes: computed.EligibleDeltaMinutes,
         FlexDeltaMinutes: computed.FlexDeltaMinutes,
         Punches: punches.Select(p => new PunchDto(p.Id, p.At, p.Note)).ToList(),
         AttendanceRequests: day?.AttendanceRequests

@@ -12,7 +12,7 @@ public sealed record MonthDayDto(
     int PlannedMinutes,
     int PunchedMinutes,
     int EligibleMinutes,
-    int AttendanceDeltaMinutes,
+    int EligibleDeltaMinutes,
     int FlexDeltaMinutes,
     int FlexBankMinutes,
     int DeficitMinutes

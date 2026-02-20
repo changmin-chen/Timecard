@@ -48,8 +48,8 @@ onMounted(() => refreshToday())
       </div>
       <div class="stat-item">
         <span class="stat-label">差額</span>
-        <span class="stat-value" :class="day.attendanceDeltaMinutes < 0 ? 'bad' : day.attendanceDeltaMinutes > 0 ? 'good' : ''">
-          {{ mins(day.attendanceDeltaMinutes) }} 分鐘
+        <span class="stat-value" :class="day.eligibleDeltaMinutes < 0 ? 'bad' : day.eligibleDeltaMinutes > 0 ? 'good' : ''">
+          {{ mins(day.eligibleDeltaMinutes) }} 分鐘
         </span>
       </div>
       <div class="stat-item">

@@ -79,7 +79,7 @@ public static class MonthEndpoints
             PlannedMinutes: d.Summary.PlannedMinutes,
             PunchedMinutes: d.Summary.PunchedMinutes,
             EligibleMinutes: d.Summary.EligibleMinutes,
-            AttendanceDeltaMinutes: d.Summary.AttendanceDeltaMinutes,
+            EligibleDeltaMinutes: d.Summary.EligibleDeltaMinutes,
             FlexDeltaMinutes: d.Summary.FlexDeltaMinutes,
             FlexBankMinutes: d.FlexBankMinutes,
             DeficitMinutes: d.Summary.DeficitMinutes
