@@ -10,7 +10,6 @@ const emit = defineEmits(['submit'])
 
 const categories = [
     {value: 'Leave', label: '請假'},
-    {value: 'Overtime', label: '加班'},
     {value: 'AnnualLeave', label: '特休'},
     {value: 'Trip', label: '出差'},
     {value: 'Other', label: '其他'},
@@ -61,9 +60,8 @@ function pillStyle(cat) {
     const cls = categoryClass(cat.value)
     const colorMap = {
         leave: {bg: 'rgba(234,179,8,.1)', color: '#a16207', border: 'rgba(234,179,8,.3)'},
-        overtime: {bg: 'rgba(37,99,235,.08)', color: '#2563eb', border: 'rgba(37,99,235,.25)'},
         annual: {bg: 'rgba(16,185,129,.08)', color: '#059669', border: 'rgba(16,185,129,.25)'},
-        trip: {bg: 'rgba(22,163,74,.08)', color: '#15803d', border: 'rgba(22,163,74,.25)'},
+        trip: {bg: 'rgba(14,165,233,.08)', color: '#0369a1', border: 'rgba(14,165,233,.25)'},
     }
     const isSelected = form.category === cat.value
     const colors = colorMap[cls]

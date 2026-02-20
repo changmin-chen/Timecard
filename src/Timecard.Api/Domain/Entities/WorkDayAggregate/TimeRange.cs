@@ -7,16 +7,16 @@ namespace Timecard.Api.Domain.Entities.WorkDayAggregate;
 /// </summary>
 public readonly record struct TimeRange
 {
-    public TimeOnly Start { get; } 
+    public TimeOnly Start { get; }
     public TimeOnly End { get; }
-    
+
     public TimeSpan Duration => End - Start;
-    
+
 
     public TimeRange(TimeOnly start, TimeOnly end)
     {
         if (end <= start) throw new ArgumentException("End must be after Start.");
-        
+
         Start = start;
         End = end;
     }
@@ -49,37 +49,34 @@ public readonly record struct TimeRange
     public TimeRange? TryGetGap(TimeRange other)
     {
         // Determine the "gap window": earlier end → later start
-        TimeOnly gapStart = End < other.End ? End : other.End; // min(End, other.End)
-        TimeOnly gapEnd = Start > other.Start ? Start : other.Start; // max(Start, other.Start)
+        var gapStart = End < other.End ? End : other.End; // min(End, other.End)
+        var gapEnd = Start > other.Start ? Start : other.Start; // max(Start, other.Start)
 
         return gapEnd > gapStart
             ? new TimeRange(gapStart, gapEnd)
             : null;
     }
 
-
     /// <summary>
-    /// Determines if the specified collection of time ranges contains any gaps between the segments.
+    /// Returns the intersection of this range and <paramref name="other"/>,
+    /// or <see langword="null"/> when they do not overlap (touching endpoints excluded).
     /// </summary>
-    /// <param name="segments">The collection of time ranges to evaluate for gaps.</param>
-    /// <returns>
-    /// True if there is at least one gap between any two segments in the sorted collection; otherwise, false.
-    /// </returns>
-    public static bool HasGaps(IEnumerable<TimeRange> segments)
+    /// <example>
+    /// [08:00~10:00].TryIntersect([09:00~11:00]) → TimeRange(09:00, 10:00)
+    /// [08:00~09:00].TryIntersect([09:00~10:00]) → null  (touching, not overlapping)
+    /// [08:00~09:00].TryIntersect([10:00~11:00]) → null
+    /// </example>
+    public TimeRange? TryIntersect(TimeRange other)
     {
-        using var sorted = segments.OrderBy(s => s.Start).GetEnumerator();
-        if (!sorted.MoveNext()) return false;
+        var intersectStart = Start > other.Start ? Start : other.Start; // max(Start, other.Start)
+        var intersectEnd = End < other.End ? End : other.End; // min(End, other.End)
 
-        var maxEnd = sorted.Current.End;
-        while (sorted.MoveNext())
-        {
-            if (sorted.Current.Start > maxEnd) return true;
-            if (sorted.Current.End > maxEnd) maxEnd = sorted.Current.End;
-        }
-
-        return false;
+        return intersectEnd > intersectStart
+            ? new TimeRange(intersectStart, intersectEnd)
+            : null;
     }
-    
+
+
     public override string ToString() => $"{Start:HH:mm} ~ {End:HH:mm}";
 }
 
@@ -89,5 +86,68 @@ public static class TimeRangeCreation
     {
         public static Result<TimeRange> Create(TimeOnly start, TimeOnly end) =>
             end > start ? new TimeRange(start, end) : Errors.WorkDay.StartBeforeEnd;
+    }
+}
+
+public static class TimeRangeCollectionExtensions
+{
+    extension(IEnumerable<TimeRange> ranges)
+    {
+        /// <summary>
+        /// 合併所有重疊或相接的區間後，計算不重複的總時長。
+        /// e.g. [9:30~17:30] + [17:20~18:00] => merged [9:30~18:00] => 510 min
+        /// </summary>
+        public TimeSpan TotalDistinctDuration()
+        {
+            var sorted = ranges.OrderBy(r => r.Start).ToList();
+            if (sorted.Count == 0) return TimeSpan.Zero;
+            
+            var merged = new List<(TimeOnly Start, TimeOnly End)>();
+            var (curStart, curEnd) = (sorted[0].Start, sorted[0].End);
+
+            foreach (var r in sorted.Skip(1))
+            {
+                if (r.Start <= curEnd) // overlaps or touches => extend
+                    curEnd = r.End;
+                else
+                {
+                    merged.Add((curStart, curEnd));
+                    (curStart, curEnd) = (r.Start, r.End);
+                }
+            }
+            merged.Add((curStart, curEnd));
+
+            return merged.Aggregate(TimeSpan.Zero, (acc, seg) => acc + (seg.End - seg.Start));
+        }
+        
+        /// <summary>
+        /// Returns the total <see cref="TimeSpan"/> from the earliest Start
+        /// to the latest End across all ranges.
+        /// </summary>
+        public TimeSpan LongestSpan()
+        {
+            var list = ranges as IList<TimeRange> ?? ranges.ToList();
+            if (list.Count == 0) throw new InvalidOperationException("Cannot compute span of an empty collection.");
+
+            return list.Max(r => r.End) - list.Min(r => r.Start);
+        }
+
+        /// <summary>
+        /// Returns true if there is at least one gap between any two segments.
+        /// </summary>
+        public bool HasGaps()
+        {
+            using var sorted = ranges.OrderBy(s => s.Start).GetEnumerator();
+            if (!sorted.MoveNext()) return false;
+
+            var maxEnd = sorted.Current.End;
+            while (sorted.MoveNext())
+            {
+                if (sorted.Current.Start > maxEnd) return true;
+                if (sorted.Current.End > maxEnd) maxEnd = sorted.Current.End;
+            }
+
+            return false;
+        }
     }
 }

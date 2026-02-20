@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Domain;
+using Timecard.Api.Domain.Entities.WorkDayAggregate;
 using Timecard.Api.Features.Calendar;
 using Timecard.Api.Features.Shared;
 using Timecard.Api.Infrastructure.Data;
@@ -25,7 +26,7 @@ public static class MonthEndpoints
         var start = new DateOnly(year, month, 1);
         var endExclusive = start.AddMonths(1);
 
-        var workDays = await db.WorkDays
+        List<WorkDay> workDays = await db.WorkDays
             .AsNoTracking()
             .Where(d => d.Date >= start && d.Date < endExclusive)
             .Include(d => d.Punches)
@@ -33,63 +34,57 @@ public static class MonthEndpoints
             .ToListAsync(ct);
 
         var workDayMap = workDays.ToDictionary(d => d.Date);
-        var existingDates = workDays.Select(d => d.Date).ToHashSet();
-
-        List<DateOnly> allDates;
-        if (!includeEmpty)
-        {
-            allDates = workDays.Select(d => d.Date).OrderBy(d => d).ToList();
-        }
-        else
-        {
-            allDates = [];
-            for (var d = start; d < endExclusive; d = d.AddDays(1))
-                allDates.Add(d);
-        }
 
         var calendarResult = await calendar.GetRequiredDaysAsync(CalendarId, start, endExclusive, ct);
         if (!calendarResult.IsSuccess) return calendarResult.Error!.ToProblem(http);
         var calendarDays = calendarResult.Value!;
 
-        var computedForMonth = allDates.Select(date =>
+        IEnumerable<DateOnly> dates = includeEmpty
+            ? Enumerable.Range(0, endExclusive.DayNumber - start.DayNumber).Select(i => start.AddDays(i))
+            : workDays.Select(d => d.Date);
+
+        var dailySummaries = dates.Select(date =>
         {
             workDayMap.TryGetValue(date, out var day);
-            var isNonWorking = !calendarDays[date].IsWorking;
-            var planned = isNonWorking ? 0 : WorkRules.PlannedMinutesPerWorkDay;
-            var (_, _, worked) = day?.DeriveSpan() ?? (null, null, 0);
-            var extension = day?.CalculateExtensionMinutes() ?? 0;
-            var computed = WorkRules.ComputeDay(planned, worked, extension);
-            return new DatedWorkSummary(date, computed);
+            bool isWorking = calendarDays[date].IsWorking;
+            var facts = day is not null
+                ? DailySettlementFacts.FromWorkday(day, isWorking)
+                : DailySettlementFacts.FromAbsence(date, isWorking);
+            return FlexTimePolicy.ComputeDay(facts);
         });
 
-        var monthReport = WorkRules.ComputeMonth(computedForMonth);
+        var monthReport = FlexTimePolicy.ComputeMonth(dailySummaries);
+
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var settledFlexBank = monthReport.Days
+            .Where(d => d.Date <= today && d.PlannedMinutes != 0)
+            .Sum(d => d.FlexDeltaMinutes);
+        var settledDeficit = monthReport.Days
+            .Where(d => d.Date <= today)
+            .Sum(d => d.DeficitMinutes);
 
         var dtoDays = monthReport.Days.Select(d =>
         {
-            var exists = existingDates.Contains(d.Date);
-            workDayMap.TryGetValue(d.Date, out var src);
-            var calendarDay = calendarDays[d.Date];
+            workDayMap.TryGetValue(d.Date, out WorkDay? src);
+            ResolvedCalendarDay calendarDay = calendarDays[d.Date];
 
             return new MonthDayDto(
                 Date: d.Date.ToString("yyyy-MM-dd"),
-                Exists: exists,
+                Exists: src is not null,
                 IsNonWorkingDay: !calendarDay.IsWorking,
                 Note: calendarDay.Note,
                 CalendarKind: calendarDay.Kind,
                 CalendarSource: calendarDay.Source,
                 PunchCount: src?.Punches.Count ?? 0,
-                PlannedMinutes: d.Day.PlannedMinutes,
-                WorkedMinutes: d.Day.WorkedMinutes,
-                ExtensionMinutes: d.Day.CreditedMinutes,
-                EffectiveMinutes: d.Day.EffectiveMinutes,
-                DeltaMinutes: d.Day.DeltaMinutes,
-                FlexDeltaMinutes: d.Day.FlexDeltaMinutes,
-                FlexUsedMinutes: d.FlexUsedMinutes,
-                FlexBankBalance: d.FlexBankBalance,
+                PlannedMinutes: d.PlannedMinutes,
+                PunchedMinutes: d.PunchedMinutes,
+                EligibleMinutes: d.EligibleMinutes,
+                EligibleDeltaMinutes: d.EligibleDeltaMinutes,
+                FlexDeltaMinutes: d.FlexDeltaMinutes,
                 DeficitMinutes: d.DeficitMinutes
             );
         }).ToList();
 
-        return Results.Ok(new MonthDto(Year: year, Month: month, FlexBankBalance: monthReport.FlexBankBalance, TotalDeficitMinutes: monthReport.TotalDeficitMinutes, Days: dtoDays));
+        return Results.Ok(new MonthResponse(Year: year, Month: month, AsOf: today, SettledFlexBankMinutes: settledFlexBank, SettledDeficitMinutes: settledDeficit, Days: dtoDays));
     }
 }

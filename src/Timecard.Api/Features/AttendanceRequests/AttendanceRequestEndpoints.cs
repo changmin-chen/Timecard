@@ -49,7 +49,7 @@ public static class AttendanceRequestEndpoints
         if (!result.IsSuccess) return result.Error!.ToProblem(http);
 
         await repo.SaveChangesAsync(ct);
-        return Results.Ok(DayMapping.ToDayDto(day, calendarDay));
+        return Results.Ok(DayMapping.ToDayResponse(day, calendarDay));
     }
 
     private static async Task<IResult> Update(WorkDayRepository repo, IWorkCalendar calendar, int id, AttendanceRequestUpdate req, HttpContext http, CancellationToken ct)
@@ -74,7 +74,7 @@ public static class AttendanceRequestEndpoints
         if (!result.IsSuccess) return result.Error!.ToProblem(http);
 
         await repo.SaveChangesAsync(ct);
-        return Results.Ok(DayMapping.ToDayDto(day, calendarDay));
+        return Results.Ok(DayMapping.ToDayResponse(day, calendarDay));
     }
 
     private static async Task<IResult> Delete(WorkDayRepository repo, IWorkCalendar calendar, int id, HttpContext http, CancellationToken ct)
@@ -90,6 +90,6 @@ public static class AttendanceRequestEndpoints
         if (!result.IsSuccess) return result.Error!.ToProblem(http);
 
         await repo.SaveChangesAsync(ct);
-        return Results.Ok(DayMapping.ToDayDto(day, calendarDay));
+        return Results.Ok(DayMapping.ToDayResponse(day, calendarDay));
     }
 }
