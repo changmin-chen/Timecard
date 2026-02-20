@@ -17,7 +17,7 @@ public static class PunchEndpoints
         var g = app.MapGroup("/api/punch").WithTags("Punch");
 
         g.MapPost("", AddPunch);
-        g.MapGet("/status", GetStatus);
+        // g.MapGet("/status", GetStatus);
 
         var p = app.MapGroup("/api/punches").WithTags("Punches");
         p.MapDelete("/{id:int}", DeletePunch);
@@ -42,12 +42,12 @@ public static class PunchEndpoints
         if (!result.IsSuccess) return result.Error!.ToProblem(http);
 
         await repo.SaveChangesAsync(ct);
-        return Results.Ok(DayMapping.ToDayDto(day, calendarDay));
+        return Results.Ok(DayMapping.ToDayResponse(day, calendarDay));
     }
 
     private static async Task<IResult> DeletePunch(WorkDayRepository repo, IWorkCalendar calendar, int id, HttpContext http, CancellationToken ct)
     {
-        var day = await repo.LoadByPunchId(id, ct);
+        WorkDay? day = await repo.LoadByPunchId(id, ct);
         if (day is null) return Results.NotFound();
 
         var calendarResult = await calendar.GetRequiredDayAsync(CalendarId, day.Date, ct);
@@ -58,26 +58,26 @@ public static class PunchEndpoints
         if (!result.IsSuccess) return result.Error!.ToProblem(http);
 
         await repo.SaveChangesAsync(ct);
-        return Results.Ok(DayMapping.ToDayDto(day, calendarDay));
+        return Results.Ok(DayMapping.ToDayResponse(day, calendarDay));
     }
 
-    private static async Task<IResult> GetStatus(WorkDayRepository repo, string? date, CancellationToken ct)
-    {
-        var d = ParseDateOrToday(date);
-        var day = await repo.LoadDay(d, ct);
-
-        var punches = day?.Punches.OrderBy(p => p.At).ToList() ?? [];
-        var (start, end, worked) = day?.DerivePunchTimestamps() ?? (null, null, 0);
-
-        return Results.Ok(new
-        {
-            Date = d.ToString("yyyy-MM-dd"),
-            PunchCount = punches.Count,
-            Start = start,
-            End = end,
-            WorkedMinutes = worked
-        });
-    }
+    // private static async Task<IResult> GetStatus(WorkDayRepository repo, string? date, CancellationToken ct)
+    // {
+    //     var d = ParseDateOrToday(date);
+    //     var day = await repo.LoadDay(d, ct);
+    //
+    //     var punches = day?.Punches.OrderBy(p => p.At).ToList() ?? [];
+    //     var (start, end, worked) = day?.GetPunchTimestamps() ?? (null, null, 0);
+    //
+    //     return Results.Ok(new
+    //     {
+    //         Date = d.ToString("yyyy-MM-dd"),
+    //         PunchCount = punches.Count,
+    //         Start = start,
+    //         End = end,
+    //         WorkedMinutes = worked
+    //     });
+    // }
 
     private static DateOnly ParseDateOrToday(string? s)
     {

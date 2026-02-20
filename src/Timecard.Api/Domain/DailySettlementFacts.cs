@@ -6,31 +6,37 @@ namespace Timecard.Api.Domain;
 /// 單日結算所需的事實資料（facts）
 /// </summary>
 /// <param name="PlannedMinutes">當日應出勤分鐘數（免上班日為 0）</param>
-/// <param name="WorkedMinutes">打卡區間推算的實際在班分鐘數</param>
-/// <param name="GrantedMinutes"> <see cref="AttendanceRequest"/> 額外認列分鐘數</param>
-/// <param name="FlexEligiblePunchMinutes">僅由 PunchSpan 且落在彈性時段內的可累積分鐘數</param>
+/// <param name="PunchMinutes">打卡區間推算的實際在班分鐘數</param>
+/// <param name="EligibleMinutes">由 PunchSpan 和 AttendanceRequests 且落在工作時段內的認列分鐘數</param>
 public sealed record DailySettlementFacts(
+    DateOnly Date,
     int PlannedMinutes,
-    int WorkedMinutes,
-    int GrantedMinutes,
-    int FlexEligiblePunchMinutes
+    int PunchMinutes,
+    int EligibleMinutes
 )
 {
     /// <summary>
-    /// Derives a <see cref="DailySettlementFacts"/> from a <see cref="WorkDay"/>.
-    /// Pass <see langword="null"/> for <paramref name="day"/> when the employee was absent.
+    /// 員工有出勤紀錄時，從 <see cref="WorkDay"/> 推算結算事實。
     /// </summary>
-    public static DailySettlementFacts From(WorkDay? day, bool isWorkingDay)
+    public static DailySettlementFacts FromWorkday(WorkDay day, bool isWorkingDay)
     {
-        var plannedMinutes = isWorkingDay ? WorkRules.PlannedMinutesPerWorkDay : 0;
+        ArgumentNullException.ThrowIfNull(day);
+        
+        var plannedMinutes = isWorkingDay ? FlexTimePolicy.PlannedMinutesPerWorkDay : 0;
+        var punchedMinutes = day.DerivePunchTimeRange()?.Duration.TotalMinutes ?? 0;
+        var eligibleMinutes = day.CalculateEligibleMinutes();
 
-        if (day is null)
-            return new DailySettlementFacts(plannedMinutes, WorkedMinutes: 0, GrantedMinutes: 0, FlexEligiblePunchMinutes: 0);
-
-        var punchedMinutes = day.DerivePunchTimestamps().PunchedMinutes;
-        var grantedMinutes = day.CalculateGrantedMinutes();
-        var flexEligiblePunchMinutes = day.CalculateFlexEligiblePunchMinutes();
-
-        return new DailySettlementFacts(plannedMinutes, punchedMinutes, grantedMinutes, flexEligiblePunchMinutes);
+        return new DailySettlementFacts(day.Date, plannedMinutes, (int)punchedMinutes, eligibleMinutes);
     }
+    
+    /// <summary>
+    /// 員工缺勤（無出勤紀錄）時建立結算事實，打卡與認列分鐘數均為 0。
+    /// </summary>
+    public static DailySettlementFacts ForAbsence(DateOnly date, bool isWorkingDay)
+    {
+        var plannedMinutes = isWorkingDay ? FlexTimePolicy.PlannedMinutesPerWorkDay : 0;
+
+        return new DailySettlementFacts(date, plannedMinutes, PunchMinutes: 0, EligibleMinutes: 0);
+    }
+    
 }

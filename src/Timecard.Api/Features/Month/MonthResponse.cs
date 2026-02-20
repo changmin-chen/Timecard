@@ -8,26 +8,21 @@ public sealed record MonthDayDto(
     string Note,
     string CalendarKind,
     string CalendarSource,
-
     int PunchCount,
-
     int PlannedMinutes,
     int PunchedMinutes,
-    int GrantedMinutes,
-    int RecognizedMinutes,
+    int EligibleMinutes,
     int AttendanceDeltaMinutes,
-    int FlexBankDeltaMinutes,
-
-    int FlexUsedMinutes,
-    int FlexBankBalance,
+    int FlexDeltaMinutes,
+    int FlexBankMinutes,
     int DeficitMinutes
 );
 
 
-public sealed record MonthDto(
+public sealed record MonthResponse(
     int Year,
     int Month,
-    int FlexBankBalance,
+    int TotalFlexBankBalance,
     int TotalDeficitMinutes,
     IReadOnlyList<MonthDayDto> Days
 );

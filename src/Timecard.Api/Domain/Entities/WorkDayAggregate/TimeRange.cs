@@ -94,10 +94,37 @@ public static class TimeRangeCollectionExtensions
     extension(IEnumerable<TimeRange> ranges)
     {
         /// <summary>
+        /// 合併所有重疊或相接的區間後，計算不重複的總時長。
+        /// e.g. [9:30~17:30] + [17:20~18:00] => merged [9:30~18:00] => 510 min
+        /// </summary>
+        public TimeSpan TotalDistinctDuration()
+        {
+            var sorted = ranges.OrderBy(r => r.Start).ToList();
+            if (sorted.Count == 0) return TimeSpan.Zero;
+            
+            var merged = new List<(TimeOnly Start, TimeOnly End)>();
+            var (curStart, curEnd) = (sorted[0].Start, sorted[0].End);
+
+            foreach (var r in sorted.Skip(1))
+            {
+                if (r.Start <= curEnd) // overlaps or touches => extend
+                    curEnd = r.End;
+                else
+                {
+                    merged.Add((curStart, curEnd));
+                    (curStart, curEnd) = (r.Start, r.End);
+                }
+            }
+            merged.Add((curStart, curEnd));
+
+            return merged.Aggregate(TimeSpan.Zero, (acc, seg) => acc + (seg.End - seg.Start));
+        }
+        
+        /// <summary>
         /// Returns the total <see cref="TimeSpan"/> from the earliest Start
         /// to the latest End across all ranges.
         /// </summary>
-        public TimeSpan Span()
+        public TimeSpan LongestSpan()
         {
             var list = ranges as IList<TimeRange> ?? ranges.ToList();
             if (list.Count == 0) throw new InvalidOperationException("Cannot compute span of an empty collection.");

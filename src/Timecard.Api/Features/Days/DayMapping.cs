@@ -1,3 +1,4 @@
+using Ardalis.GuardClauses;
 using Timecard.Api.Domain;
 using Timecard.Api.Domain.Entities;
 using Timecard.Api.Domain.Entities.WorkDayAggregate;
@@ -7,18 +8,23 @@ namespace Timecard.Api.Features.Days;
 
 public static class DayMapping
 {
-    public static DayDto ToDayDto(DateOnly date, WorkDay? day, ResolvedCalendarDay calendarDay)
+    public static DayResponse ToDayResponse(DateOnly date, WorkDay? day, ResolvedCalendarDay calendarDay)
     {
+        if (day is not null && day.Date != date)
+            throw new ArgumentException("Day does not match date", nameof(day));
+        
         var exists = day is not null;
         var isNonWorking = !calendarDay.IsWorking;
         var note = calendarDay.Note;
 
         var punches = day?.Punches.OrderBy(p => p.At).ToList() ?? [];
-        var (start, end, _) = day?.DerivePunchTimestamps() ?? (null, null, 0);
-        var facts = DailySettlementFacts.From(day, isWorkingDay: !isNonWorking);
-        var computed = WorkRules.ComputeDay(facts);
+        var (start, end) = day?.GetPunchTimestamps() ?? (null, null);
+        var facts = day is not null
+            ? DailySettlementFacts.FromWorkday(day, isWorkingDay: !isNonWorking) 
+            : DailySettlementFacts.ForAbsence(date, isWorkingDay: !isNonWorking);
+        var computed = FlexTimePolicy.ComputeDay(facts);
 
-        return new DayDto(
+        return new DayResponse(
         Date: date.ToString("yyyy-MM-dd"),
         Exists: exists,
         IsNonWorkingDay: isNonWorking,
@@ -30,10 +36,9 @@ public static class DayMapping
         PunchCount: punches.Count,
         PlannedMinutes: computed.PlannedMinutes,
         PunchedMinutes: computed.PunchedMinutes,
-        ExtensionMinutes: computed.GrantedMinutes,
-        RecognizedMinutes: computed.RecognizedMinutes,
+        EligibleMinutes: computed.EligibleMinutes,
         AttendanceDeltaMinutes: computed.AttendanceDeltaMinutes,
-        FlexBankDeltaMinutes: computed.FlexBankDeltaMinutes,
+        FlexDeltaMinutes: computed.FlexDeltaMinutes,
         Punches: punches.Select(p => new PunchDto(p.Id, p.At, p.Note)).ToList(),
         AttendanceRequests: day?.AttendanceRequests
             .OrderBy(a => a.Start)
@@ -41,8 +46,8 @@ public static class DayMapping
             .ToList() ?? []
         );
     }
-
-    public static DayDto ToDayDto(WorkDay day, ResolvedCalendarDay calendarDay)
-        => ToDayDto(day.Date, day, calendarDay);
+    
+    public static DayResponse ToDayResponse(WorkDay day, ResolvedCalendarDay calendarDay)
+        => ToDayResponse(day.Date, day, calendarDay);
 }
 

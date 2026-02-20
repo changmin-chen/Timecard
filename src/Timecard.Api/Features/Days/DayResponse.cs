@@ -3,7 +3,7 @@ namespace Timecard.Api.Features.Days;
 public sealed record PunchDto(int Id, DateTimeOffset At, string Note);
 public sealed record AttendanceRequestDto(int Id, string Category, string Start, string End, string Note);
 
-public sealed record DayDto(
+public sealed record DayResponse(
     string Date, // yyyy-MM-dd
     bool Exists,
     bool IsNonWorkingDay,
@@ -17,10 +17,9 @@ public sealed record DayDto(
 
     int PlannedMinutes,
     int PunchedMinutes,
-    int ExtensionMinutes,
-    int RecognizedMinutes,
+    int EligibleMinutes,
     int AttendanceDeltaMinutes,
-    int FlexBankDeltaMinutes,
+    int FlexDeltaMinutes,
 
     IReadOnlyList<PunchDto> Punches,
     IReadOnlyList<AttendanceRequestDto> AttendanceRequests

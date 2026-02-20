@@ -44,7 +44,7 @@ onMounted(() => refreshToday())
       </div>
       <div class="stat-item">
         <span class="stat-label">已工作 / 規定</span>
-        <span class="stat-value">{{ day.recognizedMinutes }} / {{ day.plannedMinutes }} 分鐘</span>
+        <span class="stat-value">{{ day.eligibleMinutes }} / {{ day.plannedMinutes }} 分鐘</span>
       </div>
       <div class="stat-item">
         <span class="stat-label">差額</span>
@@ -54,7 +54,7 @@ onMounted(() => refreshToday())
       </div>
       <div class="stat-item">
         <span class="stat-label">彈性候選</span>
-        <span class="stat-value">{{ mins(day.flexBankDeltaMinutes) }}</span>
+        <span class="stat-value">{{ mins(day.flexDeltaMinutes) }}</span>
       </div>
     </div>
     <div v-if="day" class="hint">
