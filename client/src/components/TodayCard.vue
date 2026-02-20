@@ -44,12 +44,12 @@ onMounted(() => refreshToday())
       </div>
       <div class="stat-item">
         <span class="stat-label">已工作 / 規定</span>
-        <span class="stat-value">{{ day.effectiveMinutes }} / {{ day.plannedMinutes }} 分鐘</span>
+        <span class="stat-value">{{ day.eligibleMinutes }} / {{ day.plannedMinutes }} 分鐘</span>
       </div>
       <div class="stat-item">
         <span class="stat-label">差額</span>
-        <span class="stat-value" :class="day.deltaMinutes < 0 ? 'bad' : day.deltaMinutes > 0 ? 'good' : ''">
-          {{ mins(day.deltaMinutes) }} 分鐘
+        <span class="stat-value" :class="day.eligibleDeltaMinutes < 0 ? 'bad' : day.eligibleDeltaMinutes > 0 ? 'good' : ''">
+          {{ mins(day.eligibleDeltaMinutes) }} 分鐘
         </span>
       </div>
       <div class="stat-item">
