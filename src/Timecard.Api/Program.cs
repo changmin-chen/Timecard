@@ -1,5 +1,10 @@
 using System.Diagnostics;
+using System.Security.Claims;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Domain.Entities;
 using Timecard.Api.Features.AttendanceRequests;
@@ -25,7 +30,73 @@ builder.Services.AddDbContext<TimecardDb>(opt =>
     opt.UseNpgsql(cs);
 });
 
-builder.Services.AddScoped<ICurrentUser, DevCurrentUser>();
+// --- Authentication & Authorization ---
+
+builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        // Return 401/403 for API routes instead of redirecting to a login page.
+        options.Events.OnRedirectToLogin = ctx =>
+        {
+            if (ctx.Request.Path.StartsWithSegments("/api"))
+                ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return Task.CompletedTask;
+        };
+        options.Events.OnRedirectToAccessDenied = ctx =>
+        {
+            if (ctx.Request.Path.StartsWithSegments("/api"))
+                ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return Task.CompletedTask;
+        };
+    })
+    .AddGoogle(options =>
+    {
+        options.ClientId = builder.Configuration["Authentication:Google:ClientId"]
+            ?? throw new InvalidOperationException("Authentication:Google:ClientId is missing.");
+        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]
+            ?? throw new InvalidOperationException("Authentication:Google:ClientSecret is missing.");
+
+        // Just-in-time provision AppUser on first login, and keep name/email fresh.
+        options.Events.OnCreatingTicket = async ctx =>
+        {
+            var userId = ctx.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var email = ctx.Principal?.FindFirst(ClaimTypes.Email)?.Value;
+            var name = ctx.Principal?.FindFirst(ClaimTypes.Name)?.Value;
+
+            if (userId is not null)
+            {
+                var db = ctx.HttpContext.RequestServices.GetRequiredService<TimecardDb>();
+                var user = await db.Users.FindAsync(userId);
+                if (user is null)
+                {
+                    db.Users.Add(new AppUser
+                    {
+                        Id = userId,
+                        Email = email ?? "",
+                        DisplayName = name ?? email ?? userId,
+                    });
+                }
+                else
+                {
+                    user.Email = email ?? user.Email;
+                    user.DisplayName = name ?? user.DisplayName;
+                }
+                await db.SaveChangesAsync();
+            }
+        };
+    });
+
+// All endpoints require authentication by default; auth endpoints opt out with AllowAnonymous().
+builder.Services.AddAuthorizationBuilder()
+    .SetFallbackPolicy(new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build());
+
+// --- Domain services ---
+
+builder.Services.AddScoped<ICurrentUser, GoogleCurrentUser>();
 builder.Services.AddScoped<WorkDayRepository>();
 builder.Services.AddScoped<IWorkCalendar, EfWorkCalendar>();
 builder.Services.AddScoped<DgpaCalendarImporter>();
@@ -50,26 +121,16 @@ var app = builder.Build();
 
     await db.Database.MigrateAsync();
     await seeder.SeedAsync();
-
-    // Phase 1: ensure the dev placeholder user exists.
-    // Removed in Phase 2 when real auth is in place.
-    if (await db.Users.FindAsync(DevCurrentUser.Id) is null)
-    {
-        db.Users.Add(new AppUser
-        {
-            Id = DevCurrentUser.Id,
-            Email = "dev@placeholder.local",
-            DisplayName = "Dev User",
-        });
-        await db.SaveChangesAsync();
-    }
 }
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseDefaultFiles();
 app.UseStaticFiles();
+app.UseAuthentication();
+app.UseAuthorization();
 
+app.MapAuthEndpoints();
 app.MapPunchEndpoints();
 app.MapDayEndpoints();
 app.MapAttendanceRequestEndpoints();
