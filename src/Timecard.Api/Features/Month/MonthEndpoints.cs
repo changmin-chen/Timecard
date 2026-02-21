@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Domain;
 using Timecard.Api.Domain.Entities.WorkDayAggregate;
+using Timecard.Api.Features.Auth;
 using Timecard.Api.Features.Calendar;
 using Timecard.Api.Features.Shared;
 using Timecard.Api.Infrastructure.Data;
@@ -18,7 +19,7 @@ public static class MonthEndpoints
         return app;
     }
 
-    private static async Task<IResult> GetMonth(TimecardDb db, IWorkCalendar calendar, HttpContext http, int year, int month, bool includeEmpty, CancellationToken ct)
+    private static async Task<IResult> GetMonth(TimecardDb db, IWorkCalendar calendar, ICurrentUser currentUser, HttpContext http, int year, int month, bool includeEmpty, CancellationToken ct)
     {
         if (year is < 2000 or > 2100) return Results.BadRequest(new { error = "year out of range." });
         if (month is < 1 or > 12) return Results.BadRequest(new { error = "month out of range." });
@@ -28,7 +29,7 @@ public static class MonthEndpoints
 
         List<WorkDay> workDays = await db.WorkDays
             .AsNoTracking()
-            .Where(d => d.Date >= start && d.Date < endExclusive)
+            .Where(d => d.UserId == currentUser.UserId && d.Date >= start && d.Date < endExclusive)
             .Include(d => d.Punches)
             .Include(d => d.AttendanceRequests)
             .ToListAsync(ct);

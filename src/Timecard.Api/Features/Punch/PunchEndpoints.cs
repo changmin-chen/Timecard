@@ -1,5 +1,6 @@
-﻿using Timecard.Api.Domain.Entities.WorkDayAggregate;
+using Timecard.Api.Domain.Entities.WorkDayAggregate;
 using Timecard.Api.Domain.Results;
+using Timecard.Api.Features.Auth;
 using Timecard.Api.Features.Calendar;
 using Timecard.Api.Features.Days;
 using Timecard.Api.Features.Shared;
@@ -27,7 +28,7 @@ public static class PunchEndpoints
 
     public sealed record PunchCreate(DateTimeOffset? At, string? Note, bool Force);
 
-    private static async Task<IResult> AddPunch(WorkDayRepository repo, IWorkCalendar calendar, PunchCreate? req, HttpContext http, CancellationToken ct)
+    private static async Task<IResult> AddPunch(WorkDayRepository repo, IWorkCalendar calendar, ICurrentUser currentUser, PunchCreate? req, HttpContext http, CancellationToken ct)
     {
         var now = req?.At ?? DateTimeOffset.UtcNow;
         var date = DateOnly.FromDateTime(now.LocalDateTime);
@@ -36,7 +37,7 @@ public static class PunchEndpoints
         if (!calendarResult.IsSuccess) return calendarResult.Error!.ToProblem(http);
         var calendarDay = calendarResult.Value!;
 
-        var day = await repo.GetOrCreateDay(date, ct);
+        var day = await repo.GetOrCreateDay(currentUser.UserId, date, ct);
 
         var result = day.AddPunch(now, req?.Note, MinInterval, req?.Force == true);
         if (!result.IsSuccess) return result.Error!.ToProblem(http);
@@ -45,9 +46,9 @@ public static class PunchEndpoints
         return Results.Ok(DayMapping.ToDayResponse(day, calendarDay));
     }
 
-    private static async Task<IResult> DeletePunch(WorkDayRepository repo, IWorkCalendar calendar, int id, HttpContext http, CancellationToken ct)
+    private static async Task<IResult> DeletePunch(WorkDayRepository repo, IWorkCalendar calendar, ICurrentUser currentUser, int id, HttpContext http, CancellationToken ct)
     {
-        WorkDay? day = await repo.LoadByPunchId(id, ct);
+        WorkDay? day = await repo.LoadByPunchId(currentUser.UserId, id, ct);
         if (day is null) return Results.NotFound();
 
         var calendarResult = await calendar.GetRequiredDayAsync(CalendarId, day.Date, ct);
