@@ -100,9 +100,6 @@ builder.Services.AddScoped<ICurrentUser, GoogleCurrentUser>();
 builder.Services.AddScoped<WorkDayRepository>();
 builder.Services.AddScoped<IWorkCalendar, EfWorkCalendar>();
 builder.Services.AddScoped<DgpaCalendarImporter>();
-builder.Services.AddScoped<DgpaCalendarSeeder>();
-builder.Services.Configure<DgpaCalendarSeedOptions>(
-    builder.Configuration.GetSection("CalendarSeed:Dgpa"));
 builder.Services.AddProblemDetails(options =>
 {
     options.CustomizeProblemDetails = ctx =>
@@ -117,10 +114,11 @@ var app = builder.Build();
 {
     await using var scope = app.Services.CreateAsyncScope();
     var db = scope.ServiceProvider.GetRequiredService<TimecardDb>();
-    var seeder = scope.ServiceProvider.GetRequiredService<DgpaCalendarSeeder>();
+    var loggerFactory = scope.ServiceProvider.GetRequiredService<ILoggerFactory>();
+    var seedLogger = loggerFactory.CreateLogger(nameof(DgpaCalendarSeed));
 
     await db.Database.MigrateAsync();
-    await seeder.SeedAsync();
+    await DgpaCalendarSeed.SeedAsync(db, seedLogger);
 }
 
 app.UseExceptionHandler();
