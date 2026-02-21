@@ -1,4 +1,9 @@
 // api.js
+
+// Called when any request receives a 401. Set by App.vue after auth is initialized.
+let _onUnauthorized = null
+export function setUnauthorizedHandler(fn) { _onUnauthorized = fn }
+
 export class ApiError extends Error {
     constructor(message, { status, statusText, body, errorCode, problemDetails } = {}) {
         super(message);
@@ -43,6 +48,8 @@ export function createApiClient({ baseUrl = "", fetchImpl = fetch } = {}) {
         }
 
         if (!res.ok) {
+            if (res.status === 401 && _onUnauthorized) _onUnauthorized()
+
             let msg = "Request failed";
             let errorCode = "";
             let problemDetails = null;
