@@ -7,7 +7,7 @@ public class WorkDayAggregateTests
 {
     private static readonly TimeSpan Offset = TimeZoneInfo.Local.GetUtcOffset(new DateTime(2026, 2, 1));
 
-    private static WorkDay CreateDay() => new(new DateOnly(2026, 2, 1));
+    private static WorkDay CreateDay() => new("test-user", new DateOnly(2026, 2, 1));
 
     // Helpers to create DateTimeOffset 
     private static DateTimeOffset At(int hour, int minute = 0)

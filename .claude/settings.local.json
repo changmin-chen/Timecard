@@ -5,7 +5,8 @@
       "Bash(dotnet test:*)",
       "Bash(npm install:*)",
       "Bash(npm run build:*)",
-      "Bash(node -e:*)"
+      "Bash(node -e:*)",
+      "Bash(dotnet ef migrations add:*)"
     ]
   }
 }

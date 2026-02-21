@@ -11,11 +11,13 @@ public sealed class WorkDay : BaseEntity<int>
     {
     }
 
-    public WorkDay(DateOnly date)
+    public WorkDay(string userId, DateOnly date)
     {
+        UserId = userId;
         Date = date;
     }
 
+    public string UserId { get; private set; } = "";
     public DateOnly Date { get; private set; }
 
     public IReadOnlyCollection<PunchEvent> Punches => _punches.AsReadOnly();

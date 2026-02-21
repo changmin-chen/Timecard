@@ -1,4 +1,5 @@
 using Timecard.Api.Domain.Entities.WorkDayAggregate;
+using Timecard.Api.Features.Auth;
 using Timecard.Api.Features.Calendar;
 using Timecard.Api.Features.Shared;
 using Timecard.Api.Infrastructure.Data;
@@ -19,10 +20,10 @@ public static class DayEndpoints
         return app;
     }
 
-    private static async Task<IResult> GetToday(WorkDayRepository repo, IWorkCalendar calendar, HttpContext http, CancellationToken ct)
+    private static async Task<IResult> GetToday(WorkDayRepository repo, IWorkCalendar calendar, ICurrentUser currentUser, HttpContext http, CancellationToken ct)
     {
         var date = DateOnly.FromDateTime(DateTime.Now);
-        WorkDay? maybeDay = await repo.LoadDay(date, ct);
+        WorkDay? maybeDay = await repo.LoadDay(currentUser.UserId, date, ct);
 
         var calendarResult = await calendar.GetRequiredDayAsync(CalendarId, date, ct);
         if (!calendarResult.IsSuccess) return calendarResult.Error!.ToProblem(http);
@@ -30,12 +31,12 @@ public static class DayEndpoints
         return Results.Ok(DayMapping.ToDayResponse(date, maybeDay, calendarResult.Value!));
     }
 
-    private static async Task<IResult> GetByDate(WorkDayRepository repo, IWorkCalendar calendar, HttpContext http, string date, CancellationToken ct)
+    private static async Task<IResult> GetByDate(WorkDayRepository repo, IWorkCalendar calendar, ICurrentUser currentUser, HttpContext http, string date, CancellationToken ct)
     {
         if (!DateOnly.TryParse(date, out var d))
             return Results.BadRequest(new { error = "Invalid date. Use yyyy-MM-dd." });
 
-        WorkDay? maybeDay = await repo.LoadDay(d, ct);
+        WorkDay? maybeDay = await repo.LoadDay(currentUser.UserId, d, ct);
 
         var calendarResult = await calendar.GetRequiredDayAsync(CalendarId, d, ct);
         if (!calendarResult.IsSuccess) return calendarResult.Error!.ToProblem(http);
