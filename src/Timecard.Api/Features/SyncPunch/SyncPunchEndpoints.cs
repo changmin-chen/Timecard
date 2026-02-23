@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Timecard.Api.Domain.Results;
+using Timecard.Api.Features.Shared;
 using Timecard.Api.Infrastructure.Data;
 
 namespace Timecard.Api.Features.SyncPunch;
@@ -10,7 +12,9 @@ public static class SyncPunchEndpoints
     public static IEndpointRouteBuilder MapSyncPunchEndpoints(this IEndpointRouteBuilder app)
     {
         var g = app.MapGroup("/api/sync-punch").WithTags("SyncPunch").AllowAnonymous();
-        g.MapPost("/punches", SyncPunches).AddEndpointFilter<ApiKeyEndpointFilter>();
+        g.MapPost("/punches", SyncPunches)
+            .AddEndpointFilter<ApiKeyEndpointFilter>()
+            .AddEndpointFilter<SyncPunchesValidationFilter>();
         return app;
     }
 
@@ -35,8 +39,8 @@ public static class SyncPunchEndpoints
         // 批次查詢，避免 N+1
         var employeeIds = req.Punches.Select(p => p.EmployeeId).Distinct().ToList();
         var users = await db.Users
-            .Where(u => u.EmployeeId != null && employeeIds.Contains(u.EmployeeId))
-            .ToDictionaryAsync(u => u.EmployeeId!, ct);
+            .Where(u => employeeIds.Contains(u.EmployeeId))
+            .ToDictionaryAsync(u => u.EmployeeId, ct);
 
         foreach (var entry in req.Punches)
         {
@@ -68,5 +72,36 @@ public static class SyncPunchEndpoints
 
         await repo.SaveChangesAsync(ct);
         return Results.Ok(new SyncPunchesResult(req.Punches.Count, added, skipped, errors));
+    }
+}
+
+internal sealed class SyncPunchesValidationFilter : IEndpointFilter
+{
+    private const int MaxPunchesPerRequest = 500;
+    
+    public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext ctx, EndpointFilterDelegate next)
+    {
+        var req = ctx.GetArgument<SyncPunchEndpoints.SyncPunchesRequest>(0);
+
+        if (req.Punches.Count == 0)
+            return new Error("sync.empty_punches", "At least one punch entry is required.",
+                ErrorKind.Validation, "Invalid request").ToProblem(ctx.HttpContext);
+
+        if (req.Punches.Count > MaxPunchesPerRequest)
+            return new Error("sync.too_many_punches", $"Maximum {MaxPunchesPerRequest} punches are allowed per request.",
+            ErrorKind.Validation, "Invalid request").ToProblem(ctx.HttpContext);
+            
+        var badIndexes = req.Punches
+            .Select((e, i) => (e, i))
+            .Where(x => string.IsNullOrWhiteSpace(x.e.EmployeeId))
+            .Select(x => x.i)
+            .ToList();
+
+        if (badIndexes.Count > 0)
+            return new Error("sync.invalid_employee_id",
+                $"EmployeeId is required for entries: {string.Join(", ", badIndexes)}.",
+                ErrorKind.Validation, "Invalid request").ToProblem(ctx.HttpContext);
+
+        return await next(ctx);
     }
 }
