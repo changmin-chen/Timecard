@@ -25,6 +25,13 @@ export const timecardApi = {
             body: JSON.stringify({ email, employeeId, displayName, temporaryPassword }),
         }),
 
+    listUsers: () => client.request("/api/admin/users"),
+
+    resetUserPassword: (id) =>
+        client.request(`/api/admin/users/${id}/reset-password`, {
+            method: "POST",
+        }),
+
     getToday: () => client.request("/api/day/today"),
 
     getDay: (date) => client.request(`/api/day/${date}`),
