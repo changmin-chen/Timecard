@@ -46,7 +46,7 @@ public static class AuthEndpoints
         {
             new(ClaimTypes.NameIdentifier, user.Id),
             new(ClaimTypes.Email, user.Email),
-            new(ClaimTypes.Name, user.DisplayName),
+            new(ClaimTypes.Name, user.DisplayName ?? user.Email),
         };
         if (user.IsAdmin)
             claims.Add(new Claim(ClaimTypes.Role, "Admin"));

@@ -18,11 +18,11 @@ export const timecardApi = {
             body: JSON.stringify({ currentPassword, newPassword }),
         }),
 
-    createUser: (email, displayName, temporaryPassword) =>
+    createUser: (email, employeeId, displayName, temporaryPassword) =>
         client.request("/api/admin/users", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, displayName, temporaryPassword }),
+            body: JSON.stringify({ email, employeeId, displayName, temporaryPassword }),
         }),
 
     getToday: () => client.request("/api/day/today"),

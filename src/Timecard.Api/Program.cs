@@ -83,23 +83,21 @@ var app = builder.Build();
     {
         var adminLogger = loggerFactory.CreateLogger("AdminSeed");
         var email = app.Configuration["InitialAdmin:Email"];
+        var employeeId = app.Configuration["InitialAdmin:EmployeeId"];
         var displayName = app.Configuration["InitialAdmin:DisplayName"];
         var password = app.Configuration["InitialAdmin:Password"];
 
-        if (email is null || displayName is null || password is null)
+        if (email is null || employeeId is null || password is null)
         {
             adminLogger.LogWarning(
-                "InitialAdmin config is incomplete (Email/DisplayName/Password required). " +
+                "InitialAdmin config is incomplete (Email/EmployeeId/Password required). " +
                 "Skipping admin seed. Set 'InitialAdmin:Password' via user-secrets.");
         }
         else
         {
             var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<AppUser>>();
-            var admin = new AppUser
+            var admin = new AppUser(Guid.NewGuid().ToString(), email, employeeId, displayName)
             {
-                Id = Guid.NewGuid().ToString(),
-                Email = email,
-                DisplayName = displayName,
                 IsAdmin = true,
                 MustChangePassword = true,
             };

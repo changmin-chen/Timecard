@@ -16,7 +16,7 @@ public static class AdminEndpoints
         return app;
     }
 
-    private record CreateUserRequest(string Email, string DisplayName, string TemporaryPassword);
+    private record CreateUserRequest(string Email, string EmployeeId, string? DisplayName, string TemporaryPassword);
 
     // POST /api/admin/users
     private static async Task<IResult> CreateUser(
@@ -27,6 +27,9 @@ public static class AdminEndpoints
         if (string.IsNullOrWhiteSpace(body.Email))
             return Results.BadRequest(new { message = "Email 不可為空。" });
 
+        if (string.IsNullOrWhiteSpace(body.EmployeeId))
+            return Results.BadRequest(new { message = "EmployeeId 不可為空。" });
+
         if (body.TemporaryPassword.Length < 8)
             return Results.BadRequest(new { message = "密碼至少需要 8 個字元。" });
 
@@ -34,11 +37,8 @@ public static class AdminEndpoints
         if (exists)
             return Results.Conflict(new { message = "此 Email 已被使用。" });
 
-        var user = new AppUser
+        var user = new AppUser(Guid.NewGuid().ToString(), body.Email, body.EmployeeId, body.DisplayName)
         {
-            Id = Guid.NewGuid().ToString(),
-            Email = body.Email,
-            DisplayName = body.DisplayName,
             MustChangePassword = true,
             IsAdmin = false,
         };
@@ -51,6 +51,7 @@ public static class AdminEndpoints
         {
             id = user.Id,
             email = user.Email,
+            employeeId = user.EmployeeId,
             displayName = user.DisplayName,
         });
     }

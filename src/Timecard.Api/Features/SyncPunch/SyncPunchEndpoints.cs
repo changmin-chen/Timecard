@@ -39,8 +39,8 @@ public static class SyncPunchEndpoints
         // 批次查詢，避免 N+1
         var employeeIds = req.Punches.Select(p => p.EmployeeId).Distinct().ToList();
         var users = await db.Users
-            .Where(u => u.EmployeeId != null && employeeIds.Contains(u.EmployeeId))
-            .ToDictionaryAsync(u => u.EmployeeId!, ct);
+            .Where(u => employeeIds.Contains(u.EmployeeId))
+            .ToDictionaryAsync(u => u.EmployeeId, ct);
 
         foreach (var entry in req.Punches)
         {

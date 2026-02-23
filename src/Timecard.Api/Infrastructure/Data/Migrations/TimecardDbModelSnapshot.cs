@@ -30,7 +30,6 @@ namespace Timecard.Api.Infrastructure.Data.Migrations
                         .HasColumnType("character varying(255)");
 
                     b.Property<string>("DisplayName")
-                        .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
@@ -40,6 +39,7 @@ namespace Timecard.Api.Infrastructure.Data.Migrations
                         .HasColumnType("character varying(255)");
 
                     b.Property<string>("EmployeeId")
+                        .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
@@ -64,7 +64,10 @@ namespace Timecard.Api.Infrastructure.Data.Migrations
 
                     b.HasIndex("EmployeeId");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", t =>
+                        {
+                            t.HasCheckConstraint("CK_Users_EmployeeId_NotEmpty", "btrim(\"EmployeeId\") <> ''");
+                        });
                 });
 
             modelBuilder.Entity("Timecard.Api.Domain.Entities.CalendarDay", b =>
