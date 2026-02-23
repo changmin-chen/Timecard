@@ -13,6 +13,7 @@ using Timecard.Api.Features.Calendar;
 using Timecard.Api.Features.Days;
 using Timecard.Api.Features.Month;
 using Timecard.Api.Features.Punch;
+using Timecard.Api.Features.SyncPunch;
 using Timecard.Api.Infrastructure.Data;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -135,5 +136,6 @@ app.MapDayEndpoints();
 app.MapAttendanceRequestEndpoints();
 app.MapMonthEndpoints();
 app.MapCalendarEndpoints();
+app.MapSyncPunchEndpoints();
 
 app.Run();
