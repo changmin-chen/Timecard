@@ -36,14 +36,7 @@ namespace Timecard.Api.Infrastructure.Data.Migrations
                 table: "Users",
                 column: "EmployeeId");
 
-            // 2. Seed the Phase-1 dev placeholder user so existing WorkDay rows have a valid FK target.
-            migrationBuilder.Sql("""
-                INSERT INTO "Users" ("Id", "Email", "DisplayName")
-                VALUES ('dev-placeholder', 'dev@placeholder.local', 'Dev User')
-                ON CONFLICT DO NOTHING;
-                """);
-
-            // 3. Add UserId column; existing rows default to the dev placeholder.
+            // 2. Add UserId column; existing rows default to the dev placeholder.
             migrationBuilder.DropIndex(
                 name: "IX_WorkDays_Date",
                 table: "WorkDays");

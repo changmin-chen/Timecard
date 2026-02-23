@@ -1,7 +1,8 @@
 import { ref } from 'vue'
+import { timecardApi } from '../timecardApi.js'
 
 // Module-level singleton — auth state is shared across all components.
-const user = ref(null)        // null = unauthenticated | { id, email, name } = authenticated
+const user = ref(null)        // null = unauthenticated | { id, email, name, isAdmin, mustChangePassword }
 const isChecking = ref(true)  // true only during the initial /api/auth/me probe
 
 export function useAuth() {
@@ -17,6 +18,12 @@ export function useAuth() {
     }
   }
 
+  async function login(email, password) {
+    const res = await timecardApi.login(email, password)
+    user.value = res
+    return res
+  }
+
   async function logout() {
     try {
       await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
@@ -25,7 +32,7 @@ export function useAuth() {
     }
   }
 
-  return { user, isChecking, checkAuth, logout }
+  return { user, isChecking, checkAuth, login, logout }
 }
 
 // Called by api.js when any request returns 401 (session expired mid-session).
