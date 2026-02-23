@@ -1,9 +1,7 @@
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Domain.Entities;
 using Timecard.Api.Domain.Results;
 using Timecard.Api.Features.Shared;
-using Timecard.Api.Infrastructure.Data;
 
 namespace Timecard.Api.Features.Auth;
 
@@ -11,7 +9,7 @@ public static class AdminEndpoints
 {
     public static IEndpointRouteBuilder MapAdminEndpoints(this IEndpointRouteBuilder app)
     {
-        var g = app.MapGroup("/api/admin").WithTags("Admin").RequireAuthorization("Admin");
+        var g = app.MapGroup("/api/admin").WithTags("Admin").RequireAuthorization(AuthRoles.Admin);
 
         g.MapPost("/users", CreateUser)
             .AddEndpointFilter<CreateUserValidationFilter>();
@@ -25,22 +23,23 @@ public static class AdminEndpoints
     private static async Task<IResult> CreateUser(
         CreateUserRequest body,
         HttpContext http,
-        TimecardDb db,
-        IPasswordHasher<AppUser> hasher)
+        UserManager<AppUser> userManager)
     {
-        var exists = await db.Users.AnyAsync(u => u.Email.ToLower() == body.Email.ToLower());
-        if (exists)
+        var exists = await userManager.FindByEmailAsync(body.Email);
+        if (exists is not null)
             return new Error("admin.email_taken", "This email is already taken.", ErrorKind.Conflict, "Conflict").ToProblem(http);
 
-        var user = new AppUser(Guid.NewGuid().ToString(), body.Email, body.EmployeeId, body.DisplayName)
+        var user = new AppUser(body.Email, body.EmployeeId, body.DisplayName)
         {
             MustChangePassword = true,
-            IsAdmin = false,
         };
-        user.PasswordHash = hasher.HashPassword(user, body.TemporaryPassword);
 
-        db.Users.Add(user);
-        await db.SaveChangesAsync();
+        var result = await userManager.CreateAsync(user, body.TemporaryPassword);
+        if (!result.Succeeded)
+        {
+            var message = string.Join(" ", result.Errors.Select(e => e.Description));
+            return new Error("admin.create_user_failed", message, ErrorKind.Validation, "Invalid request").ToProblem(http);
+        }
 
         return Results.Created($"/api/admin/users/{user.Id}", new
         {
