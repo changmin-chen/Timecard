@@ -18,8 +18,7 @@ public static class PunchEndpoints
         var g = app.MapGroup("/api/punch").WithTags("Punch");
 
         g.MapPost("", AddPunch);
-        // g.MapGet("/status", GetStatus);
-
+        
         var p = app.MapGroup("/api/punches").WithTags("Punches");
         p.MapDelete("/{id:int}", DeletePunch);
 
@@ -60,29 +59,5 @@ public static class PunchEndpoints
 
         await repo.SaveChangesAsync(ct);
         return Results.Ok(DayMapping.ToDayResponse(day, calendarDay));
-    }
-
-    // private static async Task<IResult> GetStatus(WorkDayRepository repo, string? date, CancellationToken ct)
-    // {
-    //     var d = ParseDateOrToday(date);
-    //     var day = await repo.LoadDay(d, ct);
-    //
-    //     var punches = day?.Punches.OrderBy(p => p.At).ToList() ?? [];
-    //     var (start, end, worked) = day?.GetPunchTimestamps() ?? (null, null, 0);
-    //
-    //     return Results.Ok(new
-    //     {
-    //         Date = d.ToString("yyyy-MM-dd"),
-    //         PunchCount = punches.Count,
-    //         Start = start,
-    //         End = end,
-    //         WorkedMinutes = worked
-    //     });
-    // }
-
-    private static DateOnly ParseDateOrToday(string? s)
-    {
-        if (!string.IsNullOrWhiteSpace(s) && DateOnly.TryParse(s, out var d)) return d;
-        return DateOnly.FromDateTime(DateTime.Now);
     }
 }
