@@ -4,6 +4,7 @@ import TodayCard from './components/TodayCard.vue'
 import MonthReport from './components/MonthReport.vue'
 import ToastContainer from './components/ToastContainer.vue'
 import LoginView from './components/LoginView.vue'
+import ChangePasswordView from './components/ChangePasswordView.vue'
 import { useAuth, signalUnauthorized } from './composables/useAuth.js'
 import { setUnauthorizedHandler } from './api.js'
 
@@ -28,6 +29,9 @@ const userInitial = computed(() => {
 
   <!-- Login page -->
   <LoginView v-else-if="!user" />
+
+  <!-- Force password change on first login -->
+  <ChangePasswordView v-else-if="user.mustChangePassword" />
 
   <!-- Main app -->
   <template v-else>

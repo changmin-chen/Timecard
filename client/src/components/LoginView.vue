@@ -1,5 +1,8 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useAuth } from '../composables/useAuth.js'
+
+const { login } = useAuth()
 
 const now = ref(new Date())
 let timer
@@ -25,7 +28,22 @@ const currentTime = computed(() =>
   now.value.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 )
 
-const loginUrl = '/api/auth/login?returnUrl=' + encodeURIComponent('/')
+const email = ref('')
+const password = ref('')
+const errorMsg = ref('')
+const loading = ref(false)
+
+async function handleLogin() {
+  errorMsg.value = ''
+  loading.value = true
+  try {
+    await login(email.value, password.value)
+  } catch (err) {
+    errorMsg.value = err.message || '登入失敗，請確認帳號與密碼。'
+  } finally {
+    loading.value = false
+  }
+}
 </script>
 
 <template>
@@ -35,13 +53,11 @@ const loginUrl = '/api/auth/login?returnUrl=' + encodeURIComponent('/')
       <!-- Live clock -->
       <div class="clock-wrap">
         <div class="clock" role="img" aria-label="目前時間">
-          <!-- Tick marks (12 dots) -->
           <span
             v-for="i in 12" :key="i"
             class="tick"
             :style="{ transform: `rotate(${(i / 12) * 360}deg) translateY(-30px)` }"
           />
-          <!-- Hands -->
           <div class="hand hour"   :style="{ transform: `translateX(-50%) rotate(${hourAngle}deg)` }" />
           <div class="hand minute" :style="{ transform: `translateX(-50%) rotate(${minuteAngle}deg)` }" />
           <div class="clock-center" />
@@ -51,18 +67,40 @@ const loginUrl = '/api/auth/login?returnUrl=' + encodeURIComponent('/')
 
       <!-- Title -->
       <h1 class="login-title">出勤記錄系統</h1>
-      <p class="login-sub">請使用公司 Google Workspace 帳號登入</p>
+      <p class="login-sub">請輸入帳號與密碼登入</p>
 
-      <!-- Google sign-in button -->
-      <a :href="loginUrl" class="google-btn">
-        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
-          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-        </svg>
-        使用 Google 帳號登入
-      </a>
+      <!-- Login form -->
+      <form class="login-form" @submit.prevent="handleLogin" novalidate>
+        <div class="field">
+          <label for="login-email">電子郵件</label>
+          <input
+            id="login-email"
+            v-model="email"
+            type="email"
+            autocomplete="username"
+            placeholder="user@example.com"
+            required
+          />
+        </div>
+        <div class="field">
+          <label for="login-password">密碼</label>
+          <input
+            id="login-password"
+            v-model="password"
+            type="password"
+            autocomplete="current-password"
+            placeholder="••••••••"
+            required
+          />
+        </div>
+
+        <p v-if="errorMsg" class="error-msg" role="alert">{{ errorMsg }}</p>
+
+        <button type="submit" class="submit-btn" :disabled="loading">
+          <span v-if="loading" class="btn-spinner" aria-hidden="true" />
+          {{ loading ? '登入中…' : '登入' }}
+        </button>
+      </form>
 
       <p class="login-footer">僅限公司內部使用</p>
     </div>
@@ -70,15 +108,12 @@ const loginUrl = '/api/auth/login?returnUrl=' + encodeURIComponent('/')
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&display=swap');
-
 /* ── Layout ─────────────────────────────────────── */
 .login-bg {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Subtle ruled-paper texture — nods to handwritten time records */
   background-color: var(--bg);
   background-image: repeating-linear-gradient(
     to bottom,
@@ -123,7 +158,6 @@ const loginUrl = '/api/auth/login?returnUrl=' + encodeURIComponent('/')
   position: relative;
 }
 
-/* 12 tick dots */
 .tick {
   display: block;
   width: 3px;
@@ -177,7 +211,6 @@ const loginUrl = '/api/auth/login?returnUrl=' + encodeURIComponent('/')
 
 /* ── Typography ──────────────────────────────────── */
 .login-title {
-  font-family: 'Noto Serif TC', 'Georgia', 'Times New Roman', serif;
   font-size: 24px;
   font-weight: 700;
   color: var(--text);
@@ -188,37 +221,97 @@ const loginUrl = '/api/auth/login?returnUrl=' + encodeURIComponent('/')
 .login-sub {
   font-size: 13px;
   color: var(--muted);
-  margin: 0 0 28px;
+  margin: 0 0 24px;
   line-height: 1.65;
 }
 
-/* ── Google button ───────────────────────────────── */
-.google-btn {
+/* ── Form ────────────────────────────────────────── */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: left;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.03em;
+}
+
+.field input {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  width: 100%;
+}
+
+.field input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.error-msg {
+  font-size: 13px;
+  color: var(--danger);
+  background: rgba(220, 38, 38, 0.06);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 0;
+}
+
+.submit-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   padding: 11px 20px;
-  background: #fff;
-  border: 1px solid #dadce0;
+  background: var(--primary);
+  border: none;
   border-radius: 10px;
-  color: #3c4043;
+  color: #fff;
   font-size: 14px;
   font-weight: 600;
-  text-decoration: none;
   cursor: pointer;
-  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: opacity 0.15s ease, transform 0.1s ease;
 }
-.google-btn:hover {
-  background: #f8f9fa;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.13);
+.submit-btn:hover:not(:disabled) {
+  opacity: 0.9;
   transform: translateY(-1px);
 }
-.google-btn:active {
+.submit-btn:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* ── Footer ──────────────────────────────────────── */

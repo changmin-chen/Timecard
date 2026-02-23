@@ -1,10 +1,8 @@
 using System.Diagnostics;
-using System.Security.Claims;
 using System.Text.Json;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Domain.Entities;
 using Timecard.Api.Features.AttendanceRequests;
@@ -46,61 +44,19 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
                 ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
             return Task.CompletedTask;
         };
-    })
-    .AddGoogle(options => {
-        options.ClientId = builder.Configuration["Authentication:Google:ClientId"]
-                           ?? throw new InvalidOperationException("Authentication:Google:ClientId is missing.");
-        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]
-                               ?? throw new InvalidOperationException("Authentication:Google:ClientSecret is missing.");
-
-        // Just-in-time provision AppUser on first login, and keep name/email fresh.
-        options.Events.OnCreatingTicket = async ctx => {
-            var logger = ctx.HttpContext.RequestServices
-                .GetRequiredService<ILoggerFactory>()
-                .CreateLogger("GoogleAuth");
-
-            var userId = ctx.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var email = ctx.Principal?.FindFirst(ClaimTypes.Email)?.Value;
-            var name = ctx.Principal?.FindFirst(ClaimTypes.Name)?.Value;
-
-            if (userId is null)
-            {
-                logger.LogError("Google OAuth ticket is missing NameIdentifier claim.");
-                ctx.Fail("Missing user identifier from Google.");
-                return;
-            }
-
-            var db = ctx.HttpContext.RequestServices.GetRequiredService<TimecardDb>();
-            var user = await db.Users.FindAsync(userId);
-
-            if (user is null)
-            {
-                logger.LogInformation("First login for Google user {UserId}, provisioning account.", userId);
-                db.Users.Add(new AppUser
-                {
-                    Id = userId,
-                    Email = email ?? "",
-                    DisplayName = name ?? email ?? userId,
-                });
-            }
-            else
-            {
-                user.Email = email ?? user.Email;
-                user.DisplayName = name ?? user.DisplayName;
-            }
-            await db.SaveChangesAsync();
-        };
     });
 
 // All endpoints require authentication by default; auth endpoints opt out with AllowAnonymous().
 builder.Services.AddAuthorizationBuilder()
     .SetFallbackPolicy(new AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
-        .Build());
+        .Build())
+    .AddPolicy("Admin", policy => policy.RequireRole("Admin"));
 
 // --- Domain services ---
 
-builder.Services.AddScoped<ICurrentUser, GoogleCurrentUser>();
+builder.Services.AddSingleton<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
+builder.Services.AddScoped<ICurrentUser, LocalCurrentUser>();
 builder.Services.AddScoped<WorkDayRepository>();
 builder.Services.AddScoped<IWorkCalendar, EfWorkCalendar>();
 builder.Services.AddScoped<DgpaCalendarImporter>();
@@ -121,6 +77,38 @@ var app = builder.Build();
 
     await db.Database.MigrateAsync();
     await DgpaCalendarSeed.SeedAsync(db, seedLogger);
+
+    // Seed initial admin account if Users table is empty.
+    if (!await db.Users.AnyAsync())
+    {
+        var adminLogger = loggerFactory.CreateLogger("AdminSeed");
+        var email = app.Configuration["InitialAdmin:Email"];
+        var displayName = app.Configuration["InitialAdmin:DisplayName"];
+        var password = app.Configuration["InitialAdmin:Password"];
+
+        if (email is null || displayName is null || password is null)
+        {
+            adminLogger.LogWarning(
+                "InitialAdmin config is incomplete (Email/DisplayName/Password required). " +
+                "Skipping admin seed. Set 'InitialAdmin:Password' via user-secrets.");
+        }
+        else
+        {
+            var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<AppUser>>();
+            var admin = new AppUser
+            {
+                Id = Guid.NewGuid().ToString(),
+                Email = email,
+                DisplayName = displayName,
+                IsAdmin = true,
+                MustChangePassword = true,
+            };
+            admin.PasswordHash = hasher.HashPassword(admin, password);
+            db.Users.Add(admin);
+            await db.SaveChangesAsync();
+            adminLogger.LogInformation("Seeded initial admin account: {Email}", email);
+        }
+    }
 }
 
 app.UseExceptionHandler();
@@ -131,6 +119,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapAuthEndpoints();
+app.MapAdminEndpoints();
 app.MapPunchEndpoints();
 app.MapDayEndpoints();
 app.MapAttendanceRequestEndpoints();

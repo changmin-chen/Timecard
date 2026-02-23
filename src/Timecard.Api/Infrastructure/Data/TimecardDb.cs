@@ -22,6 +22,9 @@ public sealed class TimecardDb(DbContextOptions<TimecardDb> options) : DbContext
             e.Property(x => x.Email).HasMaxLength(255);
             e.Property(x => x.DisplayName).HasMaxLength(255);
             e.Property(x => x.EmployeeId).HasMaxLength(64);
+            e.Property(x => x.PasswordHash).HasMaxLength(256).IsRequired(false);
+            e.Property(x => x.MustChangePassword).HasDefaultValue(false);
+            e.Property(x => x.IsAdmin).HasDefaultValue(false);
             e.HasIndex(x => x.Email).IsUnique();
             e.HasIndex(x => x.EmployeeId);
         });
