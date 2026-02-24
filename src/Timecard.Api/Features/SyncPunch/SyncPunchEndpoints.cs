@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Timecard.Api.Domain.Entities.WorkDayAggregate;
 using Timecard.Api.Domain.Results;
 using Timecard.Api.Features.Shared;
 using Timecard.Api.Infrastructure.Data;
@@ -35,6 +36,7 @@ public static class SyncPunchEndpoints
         var added = 0;
         var skipped = 0;
         var errors = new List<string>();
+        var dayCache = new Dictionary<(string UserId, DateOnly Date), WorkDay>();
 
         // 批次查詢，避免 N+1
         var employeeIds = req.Punches.Select(p => p.EmployeeId).Distinct().ToList();
@@ -51,7 +53,12 @@ public static class SyncPunchEndpoints
             }
 
             var date = DateOnly.FromDateTime(entry.At.LocalDateTime);
-            var day = await repo.GetOrCreateDay(user.Id, date, ct);
+            var key = (user.Id, date);
+            if (!dayCache.TryGetValue(key, out var day))
+            {
+                day = await repo.GetOrCreateDay(user.Id, date, ct);
+                dayCache[key] = day;
+            }
 
             // Idempotency: skip if a punch within DedupWindow already exists
             if (day.Punches.Any(p => Math.Abs((p.At - entry.At).TotalMinutes) < DedupWindow.TotalMinutes))
@@ -77,7 +84,7 @@ public static class SyncPunchEndpoints
 
 internal sealed class SyncPunchesValidationFilter : IEndpointFilter
 {
-    private const int MaxPunchesPerRequest = 500;
+    private const int MaxPunchesPerRequest = 5000;
     
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext ctx, EndpointFilterDelegate next)
     {

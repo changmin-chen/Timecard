@@ -31,14 +31,44 @@ public sealed class WorkDayRepository(TimecardDb db)
 
     public async Task<WorkDay> GetOrCreateDay(string userId, DateOnly date, CancellationToken ct)
     {
+        var localDay = db.WorkDays.Local.FirstOrDefault(d => d.UserId == userId && d.Date == date);
+        if (localDay is not null)
+        {
+            await EnsureDayAggregateLoadedAsync(localDay, ct);
+            return localDay;
+        }
+
         var day = await LoadDay(userId, date, ct);
         if (day is not null) return day;
 
-        day = new WorkDay(userId, date);
-        db.WorkDays.Add(day);
+        await db.Database.ExecuteSqlInterpolatedAsync($@"
+INSERT INTO ""WorkDays"" (""UserId"", ""Date"")
+VALUES ({userId}, {date})
+ON CONFLICT (""UserId"", ""Date"") DO NOTHING;", ct);
+
+        day = await LoadDay(userId, date, ct);
+        if (day is null)
+        {
+            throw new InvalidOperationException(
+            $"Failed to load WorkDay for user '{userId}' on '{date:yyyy-MM-dd}' after upsert.");
+        }
+
         return day;
     }
 
     public Task SaveChangesAsync(CancellationToken ct)
         => db.SaveChangesAsync(ct);
+
+    private async Task EnsureDayAggregateLoadedAsync(WorkDay day, CancellationToken ct)
+    {
+        var entry = db.Entry(day);
+        if (entry.State == EntityState.Added)
+            return;
+
+        if (!entry.Collection(d => d.Punches).IsLoaded)
+            await entry.Collection(d => d.Punches).LoadAsync(ct);
+
+        if (!entry.Collection(d => d.AttendanceRequests).IsLoaded)
+            await entry.Collection(d => d.AttendanceRequests).LoadAsync(ct);
+    }
 }
