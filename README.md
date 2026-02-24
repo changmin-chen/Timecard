@@ -10,6 +10,9 @@
 需求：Docker 與 Docker Compose
 
 ```bash
+# 複製範本並填入實際值
+cp .env.example .env
+
 # 啟動（首次會自動 build image）
 docker compose up -d
 
@@ -20,17 +23,20 @@ docker compose logs -f timecard
 docker compose down
 ```
 
-App 預設監聽 `http://127.0.0.1:8080`（僅內網）。
+App 監聽 `http://192.168.1.44:49178`。
 
-可透過環境變數或 `.env` 檔調整：
+EF Core migration 會在 App 啟動時自動執行。
+
+### 環境變數（`.env`）
 
 | 變數 | 預設值 | 說明 |
 |------|--------|------|
-| `POSTGRES_PASSWORD` | `change_me_strong_password` | DB 密碼，**建議修改** |
-| `TIMECARD_HTTP_PORT` | `8080` | App 對外埠號 |
-| `POSTGRES_HOST_PORT` | `15432` | PostgreSQL 對外埠號 |
-
-EF Core migration 會在 App 啟動時自動執行。
+| `POSTGRES_PASSWORD` | `change_me_strong_password` | DB 密碼，**務必修改** |
+| `POSTGRES_DB` | `timecard` | DB 名稱 |
+| `POSTGRES_USER` | `timecard_app` | DB 使用者 |
+| `POSTGRES_HOST_PORT` | `25432` | PostgreSQL 對外埠號（僅 debug 用） |
+| `INITIAL_ADMIN_PASSWORD` | — | 初始 admin 帳號密碼，**必填** |
+| `SYNC_PUNCH_API_KEY` | — | SyncPunch API 金鑰，**必填** |
 
 ## 本機開發
 
@@ -44,13 +50,13 @@ dotnet run --project src/Timecard.Api/Timecard.Api.csproj
 cd client && npm install && npm run dev
 ```
 
-資料庫連線字串：`ConnectionStrings:Timecard`（見 `appsettings.json` 或 user secrets）
+資料庫連線字串與 secrets：`ConnectionStrings:Timecard`（見 `appsettings.json` 或 `dotnet user-secrets`）
 
 ## API 快速測試
 
 ```bash
-curl -X POST http://localhost:8080/api/clock/in   # 打卡上班
-curl -X POST http://localhost:8080/api/clock/out  # 打卡下班
-curl http://localhost:8080/api/day/today           # 今天摘要
-curl http://localhost:8080/api/month/2026/2        # 本月報表
+curl -X POST http://192.168.1.44:49178/api/clock/in   # 打卡上班
+curl -X POST http://192.168.1.44:49178/api/clock/out  # 打卡下班
+curl http://192.168.1.44:49178/api/day/today           # 今天摘要
+curl http://192.168.1.44:49178/api/month/2026/2        # 本月報表
 ```
