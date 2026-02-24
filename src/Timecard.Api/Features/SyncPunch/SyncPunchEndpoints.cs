@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Timecard.Api.Domain;
 using Timecard.Api.Domain.Entities.WorkDayAggregate;
 using Timecard.Api.Domain.Results;
 using Timecard.Api.Features.Shared;
@@ -52,7 +53,7 @@ public static class SyncPunchEndpoints
                 continue;
             }
 
-            var date = DateOnly.FromDateTime(entry.At.LocalDateTime);
+            var date = TaiwanTime.ToDate(entry.At);
             var key = (user.Id, date);
             if (!dayCache.TryGetValue(key, out var day))
             {

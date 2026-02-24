@@ -5,7 +5,7 @@ namespace Timecard.Tests;
 
 public class WorkDayAggregateTests
 {
-    private static readonly TimeSpan Offset = TimeZoneInfo.Local.GetUtcOffset(new DateTime(2026, 2, 1));
+    private static readonly TimeSpan Offset = TimeSpan.FromHours(8);
 
     private static WorkDay CreateDay() => new("test-user", new DateOnly(2026, 2, 1));
 
@@ -32,9 +32,7 @@ public class WorkDayAggregateTests
     public void AddPunch_DifferentDate_Fails()
     {
         var day = CreateDay();
-        var offset2 = TimeZoneInfo.Local.GetUtcOffset(new DateTime(2026, 2, 2));
-
-        var result = day.AddPunch(new DateTimeOffset(2026, 2, 2, 9, 0, 0, offset2), "wrong day", TimeSpan.FromSeconds(30), force: false);
+        var result = day.AddPunch(new DateTimeOffset(2026, 2, 2, 9, 0, 0, Offset), "wrong day", TimeSpan.FromSeconds(30), force: false);
 
         Assert.False(result.IsSuccess);
         Assert.Equal("Changing punch date is not supported in MVP.", result.Error!.Message);
@@ -192,6 +190,16 @@ public class WorkDayAggregateTests
         
         var expected = (t2 - t1).TotalMinutes;
         Assert.Equal(expected, day.CalculateEligibleMinutes());
+    }
+
+    [Fact]
+    public void CalculateEligibleMinutes_UtcPunches_AreCalculatedInTaiwanTime()
+    {
+        var day = new WorkDay("test-user", new DateOnly(2026, 2, 13));
+        day.AddPunch(new DateTimeOffset(2026, 2, 13, 1, 56, 0, TimeSpan.Zero), "", TimeSpan.Zero, force: true);
+        day.AddPunch(new DateTimeOffset(2026, 2, 13, 10, 39, 0, TimeSpan.Zero), "", TimeSpan.Zero, force: true);
+
+        Assert.Equal(523, day.CalculateEligibleMinutes());
     }
     
     [Fact]
