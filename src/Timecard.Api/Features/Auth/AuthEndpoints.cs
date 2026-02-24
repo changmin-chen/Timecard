@@ -1,10 +1,6 @@
 using System.Security.Claims;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Domain.Entities;
-using Timecard.Api.Infrastructure.Data;
 
 namespace Timecard.Api.Features.Auth;
 
@@ -28,65 +24,52 @@ public static class AuthEndpoints
     // POST /api/auth/login
     private static async Task<IResult> Login(
         LoginRequest body,
-        TimecardDb db,
-        IPasswordHasher<AppUser> hasher,
-        HttpContext http)
+        UserManager<AppUser> userManager,
+        SignInManager<AppUser> signInManager)
     {
-        var user = await db.Users
-            .FirstOrDefaultAsync(u => u.Email.ToLower() == body.Email.ToLower());
-
-        if (user is null || user.PasswordHash is null)
+        var user = await userManager.FindByEmailAsync(body.Email);
+        if (user is null)
             return Results.Unauthorized();
 
-        var result = hasher.VerifyHashedPassword(user, user.PasswordHash, body.Password);
-        if (result == PasswordVerificationResult.Failed)
+        var check = await signInManager.CheckPasswordSignInAsync(user, body.Password, lockoutOnFailure: false);
+        if (!check.Succeeded)
             return Results.Unauthorized();
 
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, user.Id),
-            new(ClaimTypes.Email, user.Email),
-            new(ClaimTypes.Name, user.DisplayName ?? user.Email),
-        };
-        if (user.IsAdmin)
-            claims.Add(new Claim(ClaimTypes.Role, "Admin"));
-
-        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-        var principal = new ClaimsPrincipal(identity);
-        await http.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+        await signInManager.SignInAsync(user, isPersistent: false);
+        var isAdmin = await userManager.IsInRoleAsync(user, AuthRoles.Admin);
 
         return Results.Ok(new
         {
             id = user.Id,
             email = user.Email,
-            name = user.DisplayName,
-            isAdmin = user.IsAdmin,
+            name = user.DisplayName ?? user.Email,
+            isAdmin,
             mustChangePassword = user.MustChangePassword,
         });
     }
 
     // POST /api/auth/logout
-    private static async Task<IResult> Logout(HttpContext http)
+    private static async Task<IResult> Logout(SignInManager<AppUser> signInManager)
     {
-        await http.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        await signInManager.SignOutAsync();
         return Results.Ok();
     }
 
-    // GET /api/auth/me — returns current user info from DB
-    private static async Task<IResult> Me(ClaimsPrincipal principal, TimecardDb db)
+    // GET /api/auth/me returns current user info from DB
+    private static async Task<IResult> Me(ClaimsPrincipal principal, UserManager<AppUser> userManager)
     {
-        var userId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (userId is null) return Results.Unauthorized();
+        var user = await userManager.GetUserAsync(principal);
+        if (user is null)
+            return Results.Unauthorized();
 
-        var user = await db.Users.FindAsync(userId);
-        if (user is null) return Results.Unauthorized();
+        var isAdmin = await userManager.IsInRoleAsync(user, AuthRoles.Admin);
 
         return Results.Ok(new
         {
             id = user.Id,
             email = user.Email,
-            name = user.DisplayName,
-            isAdmin = user.IsAdmin,
+            name = user.DisplayName ?? user.Email,
+            isAdmin,
             mustChangePassword = user.MustChangePassword,
         });
     }
@@ -95,29 +78,34 @@ public static class AuthEndpoints
     private static async Task<IResult> ChangePassword(
         ChangePasswordRequest body,
         ClaimsPrincipal principal,
-        TimecardDb db,
-        IPasswordHasher<AppUser> hasher,
-        HttpContext http)
+        UserManager<AppUser> userManager,
+        SignInManager<AppUser> signInManager)
     {
-        var userId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (userId is null) return Results.Unauthorized();
+        var user = await userManager.GetUserAsync(principal);
+        if (user is null)
+            return Results.Unauthorized();
 
-        var user = await db.Users.FindAsync(userId);
-        if (user is null || user.PasswordHash is null) return Results.Unauthorized();
+        var changed = await userManager.ChangePasswordAsync(user, body.CurrentPassword, body.NewPassword);
+        if (!changed.Succeeded)
+        {
+            var isPasswordMismatch = changed.Errors.Any(e => e.Code == nameof(IdentityErrorDescriber.PasswordMismatch));
+            var message = isPasswordMismatch
+                ? "Current password is incorrect."
+                : string.Join(" ", changed.Errors.Select(e => e.Description));
 
-        var result = hasher.VerifyHashedPassword(user, user.PasswordHash, body.CurrentPassword);
-        if (result == PasswordVerificationResult.Failed)
-            return Results.BadRequest(new { message = "目前密碼不正確。" });
+            return Results.BadRequest(new { message });
+        }
 
-        if (body.NewPassword.Length < 8)
-            return Results.BadRequest(new { message = "新密碼至少需要 8 個字元。" });
-
-        user.PasswordHash = hasher.HashPassword(user, body.NewPassword);
         user.MustChangePassword = false;
-        await db.SaveChangesAsync();
+        var updated = await userManager.UpdateAsync(user);
+        if (!updated.Succeeded)
+        {
+            var message = string.Join(" ", updated.Errors.Select(e => e.Description));
+            return Results.BadRequest(new { message });
+        }
 
-        // 重新登入刷新 claim
-        await http.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        // Re-auth required after a password reset from temporary credentials.
+        await signInManager.SignOutAsync();
         return Results.NoContent();
     }
 }

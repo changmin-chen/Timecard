@@ -1,12 +1,12 @@
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Domain.Entities;
 using Timecard.Api.Domain.Entities.WorkDayAggregate;
 
 namespace Timecard.Api.Infrastructure.Data;
 
-public sealed class TimecardDb(DbContextOptions<TimecardDb> options) : DbContext(options)
+public sealed class TimecardDb(DbContextOptions<TimecardDb> options) : IdentityDbContext<AppUser>(options)
 {
-    public DbSet<AppUser> Users => Set<AppUser>();
     public DbSet<WorkDay> WorkDays => Set<WorkDay>();
     public DbSet<PunchEvent> Punches => Set<PunchEvent>();
     public DbSet<AttendanceRequest> AttendanceRequests => Set<AttendanceRequest>();
@@ -15,20 +15,22 @@ public sealed class TimecardDb(DbContextOptions<TimecardDb> options) : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
+
         modelBuilder.Entity<AppUser>(e =>
         {
-            e.HasKey(x => x.Id);
-            e.Property(x => x.Id).HasMaxLength(255);
-            e.Property(x => x.Email).HasMaxLength(255);
-            e.Property(x => x.DisplayName).HasMaxLength(255).IsRequired(false);
             e.Property(x => x.EmployeeId).HasMaxLength(64).IsRequired();
-            e.Property(x => x.PasswordHash).HasMaxLength(256).IsRequired(false);
+            e.Property(x => x.DisplayName).HasMaxLength(255).IsRequired(false);
             e.Property(x => x.MustChangePassword).HasDefaultValue(false);
-            e.Property(x => x.IsAdmin).HasDefaultValue(false);
-            e.HasIndex(x => x.Email).IsUnique();
+
+            // Keep email uniqueness at DB level to match login/admin-create expectations.
+            e.HasIndex(x => x.NormalizedEmail)
+                .HasDatabaseName("EmailIndex")
+                .IsUnique();
             e.HasIndex(x => x.EmployeeId);
+
             e.ToTable(t => t.HasCheckConstraint(
-                "CK_Users_EmployeeId_NotEmpty",
+                "CK_AspNetUsers_EmployeeId_NotEmpty",
                 "btrim(\"EmployeeId\") <> ''"));
         });
 

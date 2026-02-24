@@ -2,6 +2,7 @@
 import { computed, onMounted } from 'vue'
 import TodayCard from './components/TodayCard.vue'
 import MonthReport from './components/MonthReport.vue'
+import AdminUsersPanel from './components/AdminUsersPanel.vue'
 import ToastContainer from './components/ToastContainer.vue'
 import LoginView from './components/LoginView.vue'
 import ChangePasswordView from './components/ChangePasswordView.vue'
@@ -45,6 +46,7 @@ const userInitial = computed(() => {
         <div class="user-pill">
           <span class="user-avatar" aria-hidden="true">{{ userInitial }}</span>
           <span class="user-name" :title="user.email">{{ user.name || user.email }}</span>
+          <span v-if="user.isAdmin" class="badge admin-flag">Admin</span>
           <button class="ghost small" @click="logout">登出</button>
         </div>
       </div>
@@ -53,6 +55,7 @@ const userInitial = computed(() => {
     <main class="wrap">
       <TodayCard />
       <MonthReport />
+      <AdminUsersPanel v-if="user.isAdmin" />
       <ToastContainer />
 
       <footer class="wrap small">
@@ -110,5 +113,11 @@ const userInitial = computed(() => {
   padding: 4px 10px;
   font-size: 12px;
   border-radius: 999px;
+}
+
+.admin-flag {
+  border-color: rgba(37, 99, 235, 0.35);
+  color: var(--primary);
+  background: rgba(37, 99, 235, 0.08);
 }
 </style>

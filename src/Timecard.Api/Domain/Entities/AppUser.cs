@@ -1,29 +1,27 @@
 using Ardalis.GuardClauses;
+using Microsoft.AspNetCore.Identity;
 
 namespace Timecard.Api.Domain.Entities;
 
-public sealed class AppUser : BaseEntity<string>
+public sealed class AppUser : IdentityUser
 {
-    private AppUser()
+    public AppUser()
     {
     }
 
-    public AppUser(string id, string email, string employeeId, string? displayName = null)
+    public AppUser(string email, string employeeId, string? displayName = null)
     {
-        Guard.Against.NullOrWhiteSpace(id);
         Guard.Against.NullOrWhiteSpace(email);
         Guard.Against.NullOrWhiteSpace(employeeId);
 
-        Id = id.Trim();
         Email = email.Trim();
+        UserName = Email;
         EmployeeId = employeeId.Trim();
         DisplayName = string.IsNullOrWhiteSpace(displayName) ? null : displayName.Trim();
+        EmailConfirmed = true;
     }
 
-    public string Email { get; private set; } = "";
-    public string EmployeeId { get; set; } = "";            // Maps to punch clock employee ID
-    public string? DisplayName { get; private set; }
-    public string? PasswordHash { get; set; }               // PBKDF2 hash via IPasswordHasher<AppUser>
-    public bool MustChangePassword { get; set; }            // true for admin-created accounts
-    public bool IsAdmin { get; set; }                       // grants access to admin endpoints
+    public string EmployeeId { get; set; } = ""; // Maps to punch clock employee ID
+    public string? DisplayName { get; set; }
+    public bool MustChangePassword { get; set; } // true for admin-created accounts
 }
