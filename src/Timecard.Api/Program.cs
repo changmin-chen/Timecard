@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Text.Json;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -31,8 +30,25 @@ builder.Services.AddDbContext<TimecardDb>(opt => {
 
 builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options => {
+builder.Services
+    .AddIdentityCore<AppUser>(options => {
+        options.User.RequireUniqueEmail = true;
+        options.Password.RequiredLength = 8;
+        options.Password.RequireDigit = false;
+        options.Password.RequireLowercase = false;
+        options.Password.RequireUppercase = false;
+        options.Password.RequireNonAlphanumeric = false;
+        options.Password.RequiredUniqueChars = 1;
+        options.Stores.MaxLengthForKeys = 255;
+    })
+    .AddRoles<IdentityRole>()
+    .AddSignInManager<SignInManager<AppUser>>()
+    .AddEntityFrameworkStores<TimecardDb>();
+
+builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
+    .AddIdentityCookies();
+
+builder.Services.ConfigureApplicationCookie(options => {
         // Return 401/403 for API routes instead of redirecting to a login page.
         options.Events.OnRedirectToLogin = ctx => {
             if (ctx.Request.Path.StartsWithSegments("/api"))
@@ -51,11 +67,10 @@ builder.Services.AddAuthorizationBuilder()
     .SetFallbackPolicy(new AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
         .Build())
-    .AddPolicy("Admin", policy => policy.RequireRole("Admin"));
+    .AddPolicy("Admin", policy => policy.RequireRole(AuthRoles.Admin));
 
 // --- Domain services ---
 
-builder.Services.AddSingleton<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
 builder.Services.AddScoped<ICurrentUser, LocalCurrentUser>();
 builder.Services.AddScoped<WorkDayRepository>();
 builder.Services.AddScoped<IWorkCalendar, EfWorkCalendar>();
@@ -78,10 +93,23 @@ var app = builder.Build();
     await db.Database.MigrateAsync();
     await DgpaCalendarSeed.SeedAsync(db, seedLogger);
 
-    // Seed initial admin account if Users table is empty.
-    if (!await db.Users.AnyAsync())
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+    var adminLogger = loggerFactory.CreateLogger("AdminSeed");
+
+    if (!await roleManager.RoleExistsAsync(AuthRoles.Admin))
     {
-        var adminLogger = loggerFactory.CreateLogger("AdminSeed");
+        var created = await roleManager.CreateAsync(new IdentityRole(AuthRoles.Admin));
+        if (!created.Succeeded)
+        {
+            var errors = string.Join("; ", created.Errors.Select(e => e.Description));
+            adminLogger.LogError("Failed to create {Role}: {Errors}", AuthRoles.Admin, errors);
+        }
+    }
+
+    // Seed initial admin account if Users table is empty.
+    if (!await userManager.Users.AnyAsync(u => u.Id != "dev-placeholder"))
+    {
         var email = app.Configuration["InitialAdmin:Email"];
         var employeeId = app.Configuration["InitialAdmin:EmployeeId"];
         var displayName = app.Configuration["InitialAdmin:DisplayName"];
@@ -95,16 +123,30 @@ var app = builder.Build();
         }
         else
         {
-            var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<AppUser>>();
-            var admin = new AppUser(Guid.NewGuid().ToString(), email, employeeId, displayName)
+            var admin = new AppUser(email, employeeId, displayName)
             {
-                IsAdmin = true,
                 MustChangePassword = true,
             };
-            admin.PasswordHash = hasher.HashPassword(admin, password);
-            db.Users.Add(admin);
-            await db.SaveChangesAsync();
-            adminLogger.LogInformation("Seeded initial admin account: {Email}", email);
+
+            var created = await userManager.CreateAsync(admin, password);
+            if (!created.Succeeded)
+            {
+                var errors = string.Join("; ", created.Errors.Select(e => e.Description));
+                adminLogger.LogError("Failed to seed initial admin account: {Errors}", errors);
+            }
+            else
+            {
+                var roleAdded = await userManager.AddToRoleAsync(admin, AuthRoles.Admin);
+                if (!roleAdded.Succeeded)
+                {
+                    var errors = string.Join("; ", roleAdded.Errors.Select(e => e.Description));
+                    adminLogger.LogError("Failed to grant {Role} role to {Email}: {Errors}", AuthRoles.Admin, email, errors);
+                }
+                else
+                {
+                    adminLogger.LogInformation("Seeded initial admin account: {Email}", email);
+                }
+            }
         }
     }
 }

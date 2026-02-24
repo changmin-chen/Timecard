@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Personal timecard system (MVP) for tracking work hours with flex-time banking. Built with .NET 10, ASP.NET Core minimal APIs, PostgreSQL (via EF Core/Npgsql), and a Vue 3 + Vite frontend in Traditional Chinese.
 
-Core business rules: 9-hour planned workday (540 min), daily flex cap of ±55 minutes, monthly flex bank that resets each month. Logic lives in `src/Timecard.Api/Domain/WorkRules.cs`.
+Core business rules: 9-hour planned workday (540 min), daily flex cap of ±55 minutes, monthly flex bank that resets each month. Logic lives in `src/Timecard.Api/Domain/*.cs`.
 
 ## Commands
 
