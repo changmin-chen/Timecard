@@ -2,6 +2,7 @@
 import { computed, onMounted } from 'vue'
 import TodayCard from './components/TodayCard.vue'
 import MonthReport from './components/MonthReport.vue'
+import RulesPanel from './components/RulesPanel.vue'
 import AdminUsersPanel from './components/AdminUsersPanel.vue'
 import ToastContainer from './components/ToastContainer.vue'
 import LoginView from './components/LoginView.vue'
@@ -39,8 +40,8 @@ const userInitial = computed(() => {
     <header class="wrap">
       <div class="app-header-row">
         <div>
-          <h1>Timecard MVP（Punch-only）</h1>
-          <p class="sub">打卡只有「時間戳」。日工時用最早到最晚。中間亂走一律當不存在，因為你也不想記。</p>
+          <h1>Timecard</h1>
+          <p class="sub">出勤時間紀錄與彈性工時管理</p>
         </div>
 
         <div class="user-pill">
@@ -54,13 +55,10 @@ const userInitial = computed(() => {
 
     <main class="wrap">
       <TodayCard />
+      <RulesPanel />
       <MonthReport />
       <AdminUsersPanel v-if="user.isAdmin" />
       <ToastContainer />
-
-      <footer class="wrap small">
-        <div class="hint">資料存在 PostgreSQL。刪掉資料庫或資料表會清空既有資料。</div>
-      </footer>
     </main>
   </template>
 </template>

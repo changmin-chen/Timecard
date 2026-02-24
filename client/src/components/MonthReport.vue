@@ -73,7 +73,7 @@ const totalWorkDays = computed(() => {
         <div class="row">
             <div>
                 <h2>月報表</h2>
-                <div class="hint">預設不含空白日，避免週末被當成欠工時。勾選「顯示所有日期」才會列出整個月。</div>
+                <div class="hint">預設僅顯示有紀錄的日期，以避免週末或假日被誤計為欠工時。勾選「顯示所有日期」可列出當月完整日期。</div>
             </div>
             <div class="actions">
                 <input type="month" v-model="monthPick"/>
@@ -93,7 +93,7 @@ const totalWorkDays = computed(() => {
                     }} 分</span>
             </div>
             <div class="month-stat-card">
-                <span class="month-stat-label">已結算不足</span>
+                <span class="month-stat-label">累計不足時數</span>
                 <span class="month-stat-value" :class="deficitCls(month.settledDeficitMinutes)">{{ month.settledDeficitMinutes }} 分</span>
             </div>
             <div class="month-stat-card">
