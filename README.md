@@ -10,33 +10,30 @@
 需求：Docker 與 Docker Compose
 
 ```bash
-# 複製範本並填入實際值
-cp .env.example .env
-
-# 啟動（首次會自動 build image）
-docker compose up -d
-
-# 查看 log
-docker compose logs -f timecard
-
-# 停止
-docker compose down
+cp .env.example .env        # 複製範本並填入實際值（見下表）
+docker compose up -d        # 首次啟動（自動 build image，migration 自動執行）
+docker compose logs -f timecard  # 查看 log
 ```
 
 App 監聽 `http://192.168.1.44:49178`。
 
-EF Core migration 會在 App 啟動時自動執行。
-
 ### 環境變數（`.env`）
 
-| 變數 | 預設值 | 說明 |
-|------|--------|------|
-| `POSTGRES_PASSWORD` | `change_me_strong_password` | DB 密碼，**務必修改** |
-| `POSTGRES_DB` | `timecard` | DB 名稱 |
-| `POSTGRES_USER` | `timecard_app` | DB 使用者 |
-| `POSTGRES_HOST_PORT` | `25432` | PostgreSQL 對外埠號（僅 debug 用） |
-| `INITIAL_ADMIN_PASSWORD` | — | 初始 admin 帳號密碼，**必填** |
-| `SYNC_PUNCH_API_KEY` | — | SyncPunch API 金鑰，**必填** |
+| 變數 | 說明 |
+|------|------|
+| `POSTGRES_PASSWORD` | DB 密碼，**務必修改** |
+| `INITIAL_ADMIN_PASSWORD` | 初始 admin 密碼，**必填** |
+| `SYNC_PUNCH_API_KEY` | SyncPunch API 金鑰，**必填** |
+| `POSTGRES_HOST_PORT` | PostgreSQL 對外埠號（僅 debug 用，預設 25432） |
+
+### 發布新版本（不動資料庫）
+
+```bash
+docker compose build timecard
+docker compose up -d --no-deps timecard
+```
+
+`--no-deps` 會跳過 `postgres`，只重建 `timecard` 容器，資料完全不受影響。
 
 ## 本機開發
 
