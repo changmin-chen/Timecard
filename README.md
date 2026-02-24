@@ -10,27 +10,30 @@
 需求：Docker 與 Docker Compose
 
 ```bash
-# 啟動（首次會自動 build image）
-docker compose up -d
-
-# 查看 log
-docker compose logs -f timecard
-
-# 停止
-docker compose down
+cp .env.example .env        # 複製範本並填入實際值（見下表）
+docker compose up -d        # 首次啟動（自動 build image，migration 自動執行）
+docker compose logs -f timecard  # 查看 log
 ```
 
-App 預設監聽 `http://127.0.0.1:8080`（僅內網）。
+App 監聽 `http://192.168.1.44:49178`。
 
-可透過環境變數或 `.env` 檔調整：
+### 環境變數（`.env`）
 
-| 變數 | 預設值 | 說明 |
-|------|--------|------|
-| `POSTGRES_PASSWORD` | `change_me_strong_password` | DB 密碼，**建議修改** |
-| `TIMECARD_HTTP_PORT` | `8080` | App 對外埠號 |
-| `POSTGRES_HOST_PORT` | `15432` | PostgreSQL 對外埠號 |
+| 變數 | 說明 |
+|------|------|
+| `POSTGRES_PASSWORD` | DB 密碼，**務必修改** |
+| `INITIAL_ADMIN_PASSWORD` | 初始 admin 密碼，**必填** |
+| `SYNC_PUNCH_API_KEY` | SyncPunch API 金鑰，**必填** |
+| `POSTGRES_HOST_PORT` | PostgreSQL 對外埠號（僅 debug 用，預設 25432） |
 
-EF Core migration 會在 App 啟動時自動執行。
+### 發布新版本（不動資料庫）
+
+```bash
+docker compose build timecard
+docker compose up -d --no-deps timecard
+```
+
+`--no-deps` 會跳過 `postgres`，只重建 `timecard` 容器，資料完全不受影響。
 
 ## 本機開發
 
@@ -44,13 +47,13 @@ dotnet run --project src/Timecard.Api/Timecard.Api.csproj
 cd client && npm install && npm run dev
 ```
 
-資料庫連線字串：`ConnectionStrings:Timecard`（見 `appsettings.json` 或 user secrets）
+資料庫連線字串與 secrets：`ConnectionStrings:Timecard`（見 `appsettings.json` 或 `dotnet user-secrets`）
 
 ## API 快速測試
 
 ```bash
-curl -X POST http://localhost:8080/api/clock/in   # 打卡上班
-curl -X POST http://localhost:8080/api/clock/out  # 打卡下班
-curl http://localhost:8080/api/day/today           # 今天摘要
-curl http://localhost:8080/api/month/2026/2        # 本月報表
+curl -X POST http://192.168.1.44:49178/api/clock/in   # 打卡上班
+curl -X POST http://192.168.1.44:49178/api/clock/out  # 打卡下班
+curl http://192.168.1.44:49178/api/day/today           # 今天摘要
+curl http://192.168.1.44:49178/api/month/2026/2        # 本月報表
 ```

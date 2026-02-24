@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-timecard_app}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_strong_password}
     ports:
-      - "127.0.0.1:${POSTGRES_HOST_PORT:-15432}:5432"
+      - "127.0.0.1:${POSTGRES_HOST_PORT}:5432"
     volumes:
       - timecard_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -29,9 +29,11 @@ services:
         condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      ConnectionStrings__Timecard: Host=postgres;Port=5432;Database=${POSTGRES_DB:-timecard};Username=${POSTGRES_USER:-timecard_app};Password=${POSTGRES_PASSWORD:-change_me_strong_password}
+      ConnectionStrings__Timecard: Host=postgres;Port=5432;Database=${POSTGRES_DB:-timecard};Username=${POSTGRES_USER:-timecard_app};Password=${POSTGRES_PASSWORD}
+      InitialAdmin__Password: ${INITIAL_ADMIN_PASSWORD}
+      SyncPunch__ApiKey: ${SYNC_PUNCH_API_KEY}
     ports:
-      - "127.0.0.1:${TIMECARD_HTTP_PORT:-8080}:8080"
+      - "192.168.1.44:49178:8080"
 
 volumes:
   timecard_pgdata:

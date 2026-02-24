@@ -1,4 +1,5 @@
 using Timecard.Api.Domain.Entities.WorkDayAggregate;
+using Timecard.Api.Domain;
 using Timecard.Api.Features.Auth;
 using Timecard.Api.Features.Calendar;
 using Timecard.Api.Features.Shared;
@@ -22,7 +23,7 @@ public static class DayEndpoints
 
     private static async Task<IResult> GetToday(WorkDayRepository repo, IWorkCalendar calendar, ICurrentUser currentUser, HttpContext http, CancellationToken ct)
     {
-        var date = DateOnly.FromDateTime(DateTime.Now);
+        var date = TaiwanTime.Today();
         WorkDay? maybeDay = await repo.LoadDay(currentUser.UserId, date, ct);
 
         var calendarResult = await calendar.GetRequiredDayAsync(CalendarId, date, ct);

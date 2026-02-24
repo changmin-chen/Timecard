@@ -1,3 +1,5 @@
+using Timecard.Api.Domain;
+
 namespace Timecard.Api.Domain.Entities.WorkDayAggregate;
 
 public static class WorkDayMetricsExtensions
@@ -27,38 +29,11 @@ public static class WorkDayMetricsExtensions
         {
             if (day.Punches.Count < 2) return null;
             
-            var start = TimeOnly.FromDateTime(day.Punches.Min(p => p.At).LocalDateTime);
-            var end = TimeOnly.FromDateTime(day.Punches.Max(p => p.At).LocalDateTime);
+            var start = TaiwanTime.ToTime(day.Punches.Min(p => p.At));
+            var end = TaiwanTime.ToTime(day.Punches.Max(p => p.At));
 
             return end > start ? new TimeRange(start, end) : null;
         }
-
-        // [Obsolete("中間計算產物，沒人在乎Granted，不如直接CalculateFlexEligibleMinutes")]
-        // public int CalculateGrantedMinutes()
-        // {
-        //     var punchSpan = day.DerivePunchTimeRange();
-        //     var allRanges = day.AttendanceRequests.Select(r => r.Range).ToList();
-        //
-        //     if (punchSpan is null && allRanges.Count == 0) return 0;
-        //     if (punchSpan is null) return (int)allRanges.LongestSpan().TotalMinutes;
-        //
-        //     allRanges.Add(punchSpan.Value);
-        //
-        //     var totalMinutes = allRanges.LongestSpan().TotalMinutes;
-        //     var punchMinutes = punchSpan.Value.Duration.TotalMinutes;
-        //
-        //     return (int)(totalMinutes - punchMinutes);
-        // }
-
-        // [Obsolete("Use CalculateFlexEligibleMinutes instead.")]
-        // public int CalculateFlexEligiblePunchMinutes()
-        // {
-        //     var punchSpan = day.DerivePunchTimeRange();
-        //     if (punchSpan is null) return 0;
-        //
-        //     var intersection = punchSpan.Value.TryIntersect(FlexWindow);
-        //     return intersection is null ? 0 : (int)intersection.Value.Duration.TotalMinutes;
-        // }
 
         public int CalculateEligibleMinutes()
         {
