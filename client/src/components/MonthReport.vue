@@ -18,8 +18,10 @@ onMounted(() => {
     const yyyy = now.getFullYear()
     const mm = String(now.getMonth() + 1).padStart(2, '0')
     monthPick.value = `${yyyy}-${mm}`
-    load()
+    // load() is triggered by the monthPick watcher below
 })
+
+watch(monthPick, () => load())
 
 watch(monthStale, () => {
     if (month.value) load()
@@ -81,7 +83,6 @@ const totalWorkDays = computed(() => {
                     <input type="checkbox" v-model="includeEmpty"/>
                     顯示所有日期
                 </label>
-                <button class="ghost" @click="load" :disabled="loading">重新整理</button>
             </div>
         </div>
 
