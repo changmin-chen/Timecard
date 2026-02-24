@@ -1,3 +1,4 @@
+using Timecard.Api.Domain;
 using Timecard.Api.Domain.Results;
 
 namespace Timecard.Api.Domain.Entities.WorkDayAggregate;
@@ -123,14 +124,14 @@ public sealed class WorkDay : BaseEntity<int>
         var ordered = _punches.OrderBy(p => p.At).ToList();
         if (ordered.Count < 2) return null;
 
-        var start = TimeOnly.FromDateTime(ordered[0].At.LocalDateTime);
-        var end = TimeOnly.FromDateTime(ordered[^1].At.LocalDateTime);
+        var start = TaiwanTime.ToTime(ordered[0].At);
+        var end = TaiwanTime.ToTime(ordered[^1].At);
         return new TimeRange(start, end);
     }
 
     private Result ValidatePunchDate(DateTimeOffset at)
     {
-        var punchDate = DateOnly.FromDateTime(at.LocalDateTime);
+        var punchDate = TaiwanTime.ToDate(at);
         if (punchDate != Date)
             return Errors.WorkDay.InvalidPunchDate;
 

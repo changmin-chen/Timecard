@@ -14,20 +14,20 @@ public static class DayMapping
             throw new ArgumentException("Day does not match date", nameof(day));
         
         var exists = day is not null;
-        var isNonWorking = !calendarDay.IsWorking;
+        var isWorkingDay = calendarDay.IsWorking;
         var note = calendarDay.Note;
 
         var punches = day?.Punches.OrderBy(p => p.At).ToList() ?? [];
         var (start, end) = day?.GetPunchTimestamps() ?? (null, null);
         var facts = day is not null
-            ? DailySettlementFacts.FromWorkday(day, isWorkingDay: !isNonWorking) 
-            : DailySettlementFacts.FromAbsence(date, isWorkingDay: !isNonWorking);
+            ? DailySettlementFacts.FromWorkday(day, isWorkingDay: isWorkingDay) 
+            : DailySettlementFacts.FromAbsence(date, isWorkingDay: isWorkingDay);
         var computed = FlexTimePolicy.ComputeDay(facts);
 
         return new DayResponse(
         Date: date.ToString("yyyy-MM-dd"),
         Exists: exists,
-        IsNonWorkingDay: isNonWorking,
+        IsNonWorkingDay: !isWorkingDay,
         Note: note,
         CalendarKind: calendarDay.Kind,
         CalendarSource: calendarDay.Source,

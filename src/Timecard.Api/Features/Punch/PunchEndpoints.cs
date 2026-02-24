@@ -1,4 +1,5 @@
 using Timecard.Api.Domain.Entities.WorkDayAggregate;
+using Timecard.Api.Domain;
 using Timecard.Api.Domain.Results;
 using Timecard.Api.Features.Auth;
 using Timecard.Api.Features.Calendar;
@@ -30,7 +31,7 @@ public static class PunchEndpoints
     private static async Task<IResult> AddPunch(WorkDayRepository repo, IWorkCalendar calendar, ICurrentUser currentUser, PunchCreate? req, HttpContext http, CancellationToken ct)
     {
         var now = req?.At ?? DateTimeOffset.UtcNow;
-        var date = DateOnly.FromDateTime(now.LocalDateTime);
+        var date = TaiwanTime.ToDate(now);
 
         var calendarResult = await calendar.GetRequiredDayAsync(CalendarId, date, ct);
         if (!calendarResult.IsSuccess) return calendarResult.Error!.ToProblem(http);

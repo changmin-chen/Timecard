@@ -56,7 +56,7 @@ public static class MonthEndpoints
 
         var monthReport = FlexTimePolicy.ComputeMonth(dailySummaries);
 
-        var today = DateOnly.FromDateTime(DateTime.Today);
+        var today = TaiwanTime.Today();
         var settledFlexBank = monthReport.Days
             .Where(d => d.Date <= today && d.PlannedMinutes != 0)
             .Sum(d => d.FlexDeltaMinutes);
