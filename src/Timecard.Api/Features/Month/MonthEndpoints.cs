@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Domain;
 using Timecard.Api.Domain.Entities.WorkDayAggregate;
+using Timecard.Api.Domain.Results;
 using Timecard.Api.Features.Auth;
 using Timecard.Api.Features.Calendar;
 using Timecard.Api.Features.Shared;
@@ -44,8 +45,7 @@ public static class MonthEndpoints
             ? Enumerable.Range(0, endExclusive.DayNumber - start.DayNumber).Select(i => start.AddDays(i))
             : workDays.Select(d => d.Date);
 
-        var dailySummaries = dates.Select(date =>
-        {
+        var dailySummaries = dates.Select(date => {
             workDayMap.TryGetValue(date, out var day);
             bool isWorking = calendarDays[date].IsWorking;
             var facts = day is not null
@@ -60,24 +60,26 @@ public static class MonthEndpoints
         var settledFlexBank = monthReport.Days.FlexBalanceMinutes(today);
         var settledDeficit = monthReport.Days.DeficitBalanceMinutes(today);
 
-        var dtoDays = monthReport.Days.Select(d =>
-        {
+        var dtoDays = monthReport.Days.Select(d => {
             workDayMap.TryGetValue(d.Date, out WorkDay? src);
             ResolvedCalendarDay calendarDay = calendarDays[d.Date];
+            var (punchStart, punchEnd) = src?.GetPunchTimestamps() ?? (null, null);
 
             return new MonthDayDto(
-                Date: d.Date.ToString("yyyy-MM-dd"),
-                Exists: src is not null,
-                IsNonWorkingDay: !calendarDay.IsWorking,
-                Note: calendarDay.Note,
-                CalendarKind: calendarDay.Kind,
-                PunchCount: src?.Punches.Count ?? 0,
-                PlannedMinutes: d.PlannedMinutes,
-                PunchedMinutes: d.PunchedMinutes,
-                EligibleMinutes: d.EligibleMinutes,
-                EligibleDeltaMinutes: d.EligibleDeltaMinutes,
-                FlexDeltaMinutes: d.FlexDeltaMinutes,
-                DeficitMinutes: d.DeficitMinutes
+            Date: d.Date.ToString("yyyy-MM-dd"),
+            Exists: src is not null,
+            IsNonWorkingDay: !calendarDay.IsWorking,
+            Note: calendarDay.Note,
+            CalendarKind: calendarDay.Kind,
+            Start: punchStart,
+            End: punchEnd,
+            PunchCount: src?.Punches.Count ?? 0,
+            PlannedMinutes: d.PlannedMinutes,
+            PunchedMinutes: d.PunchedMinutes,
+            EligibleMinutes: d.EligibleMinutes,
+            EligibleDeltaMinutes: d.EligibleDeltaMinutes,
+            FlexDeltaMinutes: d.FlexDeltaMinutes,
+            DeficitMinutes: d.DeficitMinutes
             );
         }).ToList();
 
