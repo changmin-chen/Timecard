@@ -1,6 +1,6 @@
 <script setup>
 import {ref, computed, onMounted, watch} from 'vue'
-import {fmtMins, fmtMinsHM, minsToHM, fmtTime, categoryLabel, categoryClass} from '../utils.js'
+import {fmtMins, minsToHMLabeled, fmtMinsHMLabeled, fmtTime, categoryLabel, categoryClass} from '../utils.js'
 import {useMonth} from '../composables/useMonth.js'
 import {useMonthInvalidation} from '../composables/useMonthInvalidation.js'
 
@@ -10,7 +10,6 @@ const {month, loading, loadMonth} = useMonth()
 const {monthStale} = useMonthInvalidation()
 
 const monthPick = ref('')
-const includeEmpty = ref(false)
 
 onMounted(() => {
     const now = new Date()
@@ -26,16 +25,12 @@ watch(monthStale, () => {
     if (month.value) load()
 })
 
-watch(includeEmpty, () => {
-    if (month.value) load()
-})
-
 function load() {
     const match = /^(\d{4})-(\d{2})$/.exec(monthPick.value)
     if (!match) return
     const y = Number(match[1])
     const m = Number(match[2])
-    loadMonth(y, m, includeEmpty.value)
+    loadMonth(y, m, true)
 }
 
 function isFuture(dateStr) {
@@ -89,19 +84,18 @@ function fmtStartTimeTW(isoStr) {
 }
 
 function getCellBadges(d) {
+    // NonWorkingDay: no badges — cell is dimmed by CSS
+    if (d.isNonWorkingDay) return []
+
     const all = []
-    if (d.isNonWorkingDay) {
-        all.push({ text: d.note || '休', cls: 'nonworking' })
-    } else {
-        if (d.start) {
-            const isLate = startMinutesTW(d.start) > 9 * 60
-            all.push({ text: fmtStartTimeTW(d.start), cls: isLate ? 'punch-late' : 'punch-ok' })
-        } else if (!d.attendanceRequests?.length) {
-            all.push({ text: '缺勤', cls: 'absent' })
-        }
-        for (const r of (d.attendanceRequests || [])) {
-            all.push({ text: categoryLabel(r.category), cls: categoryClass(r.category) || '' })
-        }
+    if (d.start) {
+        const isLate = startMinutesTW(d.start) > 9 * 60
+        all.push({ text: fmtStartTimeTW(d.start), cls: isLate ? 'punch-late' : 'punch-ok' })
+    } else if (!d.attendanceRequests?.length) {
+        all.push({ text: '缺勤', cls: 'absent' })
+    }
+    for (const r of (d.attendanceRequests || [])) {
+        all.push({ text: categoryLabel(r.category), cls: categoryClass(r.category) || '' })
     }
     return all
 }
@@ -142,17 +136,9 @@ function isToday(dateStr) {
 <template>
     <section class="card">
         <div class="row">
-            <div>
-                <h2>月報表</h2>
-                <div class="hint">預設僅顯示今日（含）以前的有紀錄日期。勾選「顯示所有日期」可列出當月完整記錄（含未出勤日）。
-                </div>
-            </div>
+            <h2>月報表</h2>
             <div class="actions">
                 <input type="month" v-model="monthPick"/>
-                <label class="inline small">
-                    <input type="checkbox" v-model="includeEmpty"/>
-                    顯示所有日期
-                </label>
             </div>
         </div>
 
@@ -183,7 +169,11 @@ function isToday(dateStr) {
                 v-for="d in calendarCells"
                 :key="d.date"
                 class="cal-cell"
-                :class="{ 'cal-today': isToday(d.date), 'cal-future': isFuture(d.date) }"
+                :class="{
+                    'cal-today': isToday(d.date),
+                    'cal-future': isFuture(d.date),
+                    'cal-nonworking': d.inScope && d.isNonWorkingDay
+                }"
             >
                 <div class="cal-day-num" :class="{ 'cal-today-num': isToday(d.date) }">
                     {{ Number(d.date.slice(8)) }}
@@ -213,27 +203,33 @@ function isToday(dateStr) {
                         <th>上班</th>
                         <th>下班</th>
                         <th>工時</th>
-                        <th>彈性增減</th>
+                        <th>彈性</th>
                         <th>不足</th>
-                        <th>備註</th>
+                        <th>狀態</th>
                     </tr>
                     </thead>
                     <tbody>
-                    <tr v-for="d in visibleDays" :key="d.date">
-                        <td class="mono">{{ fmtDateShort(d.date) }}<span v-if="d.isNonWorkingDay"
-                                                                         class="badge"> OFF</span></td>
+                    <tr v-for="d in visibleDays" :key="d.date" :class="{ 'row-nonworking': d.isNonWorkingDay }">
+                        <td class="mono">{{ fmtDateShort(d.date) }}</td>
                         <td class="mono">{{ fmtTime(d.start) }}</td>
                         <td class="mono">{{ fmtTime(d.end) }}</td>
-                        <td class="mono">{{ d.eligibleMinutes ? minsToHM(d.eligibleMinutes) : '\u2014' }}</td>
-                        <td class="mono" :class="deltaCls(d.flexDeltaMinutes)">{{
-                                d.flexDeltaMinutes !== 0 ? fmtMinsHM(d.flexDeltaMinutes) : '\u2014'
-                            }}
+                        <td class="mono">{{ d.eligibleMinutes ? minsToHMLabeled(d.eligibleMinutes) : '\u2014' }}</td>
+                        <td class="mono" :class="deltaCls(d.flexDeltaMinutes)">{{ fmtMinsHMLabeled(d.flexDeltaMinutes) }}</td>
+                        <td class="mono" :class="deficitCls(d.deficitMinutes)">{{ d.deficitMinutes ? minsToHMLabeled(d.deficitMinutes) : '' }}</td>
+                        <td class="status-cell">
+                            <template v-if="d.isNonWorkingDay">
+                                <span class="st-tag st-dim"><span class="sym sym-diamond"></span>{{ d.note || '非工作日' }}</span>
+                            </template>
+                            <template v-else-if="d.attendanceRequests?.length">
+                                <span v-for="r in d.attendanceRequests" :key="r.category" class="st-tag st-dim st-req"><span class="sym sym-diamond"></span>{{ categoryLabel(r.category) }}</span>
+                            </template>
+                            <template v-else-if="d.start">
+                                <span class="st-tag st-dim"><span class="sym sym-circle"></span>正常</span>
+                            </template>
+                            <template v-else>
+                                <span class="st-tag st-bad"><span class="sym sym-triangle"></span>缺勤</span>
+                            </template>
                         </td>
-                        <td class="mono" :class="deficitCls(d.deficitMinutes)">{{
-                                d.deficitMinutes ? minsToHM(d.deficitMinutes) : ''
-                            }}
-                        </td>
-                        <td>{{ d.note || '' }}</td>
                     </tr>
                     </tbody>
                 </table>

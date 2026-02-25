@@ -21,6 +21,22 @@ export function fmtMinsHM(m) {
   return (m > 0 ? '+' : '-') + minsToHM(m)
 }
 
+// 90 → "1h 30m" | 45 → "45m" | 60 → "1h"
+export function minsToHMLabeled(m) {
+  const abs = Math.abs(m)
+  const h = Math.floor(abs / 60)
+  const min = abs % 60
+  if (h > 0 && min > 0) return `${h}h ${min}m`
+  if (h > 0) return `${h}h`
+  return `${min}m`
+}
+
+// signed: +90 → "+1h 30m" | -45 → "-45m" | 0 → "—"
+export function fmtMinsHMLabeled(m) {
+  if (m === 0) return '\u2014'
+  return (m > 0 ? '+' : '-') + minsToHMLabeled(m)
+}
+
 const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 
 export function fmtDate(dateStr) {
