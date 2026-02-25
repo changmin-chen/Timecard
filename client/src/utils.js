@@ -9,6 +9,18 @@ export function fmtMins(m) {
   return `${sign}${m}`
 }
 
+// 520 → "8:40" | 9 → "0:09"
+export function minsToHM(m) {
+  const abs = Math.abs(m)
+  return `${Math.floor(abs / 60)}:${String(abs % 60).padStart(2, '0')}`
+}
+
+// signed: +55 → "+0:55" | -30 → "-0:30" | 0 → "0:00"
+export function fmtMinsHM(m) {
+  if (m === 0) return '0:00'
+  return (m > 0 ? '+' : '-') + minsToHM(m)
+}
+
 const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 
 export function fmtDate(dateStr) {

@@ -1,6 +1,6 @@
 <script setup>
 import {ref, computed, onMounted, watch} from 'vue'
-import {fmtMins} from '../utils.js'
+import {fmtMins, fmtMinsHM, minsToHM, fmtTime, categoryLabel, categoryClass} from '../utils.js'
 import {useMonth} from '../composables/useMonth.js'
 import {useMonthInvalidation} from '../composables/useMonthInvalidation.js'
 
@@ -73,6 +73,70 @@ const totalWorkDays = computed(() => {
     if (!month.value) return 0
     return month.value.days.filter(d => !d.isNonWorkingDay).length
 })
+
+// ── Calendar helpers ──────────────────────────────────────────────
+
+function startMinutesTW(isoStr) {
+    const d = new Date(isoStr)
+    return ((d.getUTCHours() + 8) % 24) * 60 + d.getUTCMinutes()
+}
+
+function fmtStartTimeTW(isoStr) {
+    const d = new Date(isoStr)
+    const h = (d.getUTCHours() + 8) % 24
+    const m = d.getUTCMinutes()
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
+function getCellBadges(d) {
+    const all = []
+    if (d.isNonWorkingDay) {
+        all.push({ text: d.note || '休', cls: 'nonworking' })
+    } else {
+        if (d.start) {
+            const isLate = startMinutesTW(d.start) > 9 * 60
+            all.push({ text: fmtStartTimeTW(d.start), cls: isLate ? 'punch-late' : 'punch-ok' })
+        } else if (!d.attendanceRequests?.length) {
+            all.push({ text: '缺勤', cls: 'absent' })
+        }
+        for (const r of (d.attendanceRequests || [])) {
+            all.push({ text: categoryLabel(r.category), cls: categoryClass(r.category) || '' })
+        }
+    }
+    return all
+}
+
+// Map of date string → day data for O(1) lookup
+const dayMap = computed(() => {
+    if (!month.value) return {}
+    return Object.fromEntries(month.value.days.map(d => [d.date, d]))
+})
+
+// Full month day sequence for the calendar (all days 1..N)
+// inScope=true → day was returned by the API (may or may not have a WorkDay record)
+const calendarCells = computed(() => {
+    if (!month.value) return []
+    const { year, month: m } = month.value
+    const daysInMonth = new Date(year, m, 0).getDate()
+    return Array.from({ length: daysInMonth }, (_, i) => {
+        const day = String(i + 1).padStart(2, '0')
+        const dateStr = `${year}-${String(m).padStart(2, '0')}-${day}`
+        const fromApi = dayMap.value[dateStr]
+        return fromApi
+            ? { ...fromApi, inScope: true }
+            : { date: dateStr, inScope: false, exists: false, isNonWorkingDay: false, note: '', start: null, attendanceRequests: [] }
+    })
+})
+
+// Day-of-week (0=Sun) for the 1st of the displayed month
+const firstDayOffset = computed(() => {
+    if (!month.value) return 0
+    return new Date(month.value.year, month.value.month - 1, 1).getDay()
+})
+
+function isToday(dateStr) {
+    return !!month.value && dateStr === month.value.asOf
+}
 </script>
 
 <template>
@@ -102,12 +166,40 @@ const totalWorkDays = computed(() => {
             <div class="month-stat-card">
                 <span class="month-stat-label">累計不足</span>
                 <span class="month-stat-value" :class="deficitCls(month.settledDeficitMinutes)">{{
-                        month.settledDeficitMinutes || '\u2014'
-                    }}{{ month.settledDeficitMinutes ? ' 分' : '' }}</span>
+                        month.settledDeficitMinutes ? `${month.settledDeficitMinutes} 分` : '\u2014'
+                    }}</span>
             </div>
             <div class="month-stat-card">
                 <span class="month-stat-label">出勤天數</span>
                 <span class="month-stat-value">{{ attendedDays }} / {{ totalWorkDays }}</span>
+            </div>
+        </div>
+
+        <!-- Calendar grid -->
+        <div v-if="month" class="cal-grid">
+            <div class="cal-header-cell" v-for="wd in ['日','一','二','三','四','五','六']" :key="wd">{{ wd }}</div>
+            <div class="cal-empty" v-for="n in firstDayOffset" :key="'e'+n"></div>
+            <div
+                v-for="d in calendarCells"
+                :key="d.date"
+                class="cal-cell"
+                :class="{ 'cal-today': isToday(d.date), 'cal-future': isFuture(d.date) }"
+            >
+                <div class="cal-day-num" :class="{ 'cal-today-num': isToday(d.date) }">
+                    {{ Number(d.date.slice(8)) }}
+                </div>
+                <div v-if="d.inScope && !isFuture(d.date)" class="cal-badges">
+                    <span
+                        v-for="(b, i) in getCellBadges(d).slice(0, 2)"
+                        :key="i"
+                        class="cal-badge"
+                        :class="b.cls"
+                    >{{ b.text }}</span>
+                    <span
+                        v-if="getCellBadges(d).length > 2"
+                        class="cal-badge overflow"
+                    >+{{ getCellBadges(d).length - 2 }}</span>
+                </div>
             </div>
         </div>
 
@@ -118,6 +210,8 @@ const totalWorkDays = computed(() => {
                     <thead>
                     <tr>
                         <th>日期</th>
+                        <th>上班</th>
+                        <th>下班</th>
                         <th>工時</th>
                         <th>彈性增減</th>
                         <th>不足</th>
@@ -128,13 +222,15 @@ const totalWorkDays = computed(() => {
                     <tr v-for="d in visibleDays" :key="d.date">
                         <td class="mono">{{ fmtDateShort(d.date) }}<span v-if="d.isNonWorkingDay"
                                                                          class="badge"> OFF</span></td>
-                        <td class="mono">{{ d.eligibleMinutes || '\u2014' }}</td>
+                        <td class="mono">{{ fmtTime(d.start) }}</td>
+                        <td class="mono">{{ fmtTime(d.end) }}</td>
+                        <td class="mono">{{ d.eligibleMinutes ? minsToHM(d.eligibleMinutes) : '\u2014' }}</td>
                         <td class="mono" :class="deltaCls(d.flexDeltaMinutes)">{{
-                                d.flexDeltaMinutes !== 0 ? fmtMins(d.flexDeltaMinutes) : '\u2014'
+                                d.flexDeltaMinutes !== 0 ? fmtMinsHM(d.flexDeltaMinutes) : '\u2014'
                             }}
                         </td>
                         <td class="mono" :class="deficitCls(d.deficitMinutes)">{{
-                                d.deficitMinutes || ''
+                                d.deficitMinutes ? minsToHM(d.deficitMinutes) : ''
                             }}
                         </td>
                         <td>{{ d.note || '' }}</td>

@@ -66,7 +66,7 @@ public static class MonthEndpoints
             var (punchStart, punchEnd) = src?.GetPunchTimestamps() ?? (null, null);
 
             return new MonthDayDto(
-            Date: d.Date.ToString("yyyy-MM-dd"),
+            Date: d.Date,
             Exists: src is not null,
             IsNonWorkingDay: !calendarDay.IsWorking,
             Note: calendarDay.Note,
@@ -79,7 +79,13 @@ public static class MonthEndpoints
             EligibleMinutes: d.EligibleMinutes,
             EligibleDeltaMinutes: d.EligibleDeltaMinutes,
             FlexDeltaMinutes: d.FlexDeltaMinutes,
-            DeficitMinutes: d.DeficitMinutes
+            DeficitMinutes: d.DeficitMinutes,
+            AttendanceRequests: src?.AttendanceRequests
+                .Select(r => new MonthDayAttendanceDto(r.Category,
+                    r.Range.Start,
+                    r.Range.End,
+                    r.Note))
+                .ToList() ?? []
             );
         }).ToList();
 

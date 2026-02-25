@@ -91,18 +91,19 @@ onMounted(() => refreshToday())
         <PunchList :punches="day?.punches ?? []" />
       </div>
     </Transition>
+  </section>
 
-    <div class="mt">
-      <AttendanceForm
-        :date="currentDate"
-        :loading="loading"
-        @submit="addAttendanceRequest"
-      />
-      <AttendanceList
-        :requests="day?.attendanceRequests ?? []"
-        @delete="deleteAttendanceRequest"
-      />
-    </div>
+  <section class="card">
+    <h3>出勤申請</h3>
+    <AttendanceForm
+      :date="currentDate"
+      :loading="loading"
+      @submit="addAttendanceRequest"
+    />
+    <AttendanceList
+      :requests="day?.attendanceRequests ?? []"
+      @delete="deleteAttendanceRequest"
+    />
   </section>
 </template>
 
