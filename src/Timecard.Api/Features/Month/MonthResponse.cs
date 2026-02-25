@@ -7,7 +7,6 @@ public sealed record MonthDayDto(
     bool IsNonWorkingDay,
     string Note,
     string CalendarKind,
-    string CalendarSource,
     int PunchCount,
     int PlannedMinutes,
     int PunchedMinutes,

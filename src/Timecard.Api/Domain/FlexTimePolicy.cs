@@ -38,8 +38,8 @@ public static class FlexTimePolicy
     public static MonthlyFlexReport ComputeMonth(IEnumerable<DailyWorkSummary> daysInAnyOrder)
     {
         var days = daysInAnyOrder.OrderBy(d => d.Date).ToList();
-        var totalFlex = days.Where(d => d.PlannedMinutes != 0).Sum(d => d.FlexDeltaMinutes);
-        var totalDeficit = days.Sum(d => d.DeficitMinutes);
+        var totalFlex = days.FlexBalanceMinutes();
+        var totalDeficit = days.DeficitBalanceMinutes();
         return new MonthlyFlexReport(days, TotalFlexBankMinutes: totalFlex, TotalDeficitMinutes: totalDeficit);
     }
 }

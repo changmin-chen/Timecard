@@ -57,12 +57,8 @@ public static class MonthEndpoints
         var monthReport = FlexTimePolicy.ComputeMonth(dailySummaries);
 
         var today = TaiwanTime.Today();
-        var settledFlexBank = monthReport.Days
-            .Where(d => d.Date <= today && d.PlannedMinutes != 0)
-            .Sum(d => d.FlexDeltaMinutes);
-        var settledDeficit = monthReport.Days
-            .Where(d => d.Date <= today)
-            .Sum(d => d.DeficitMinutes);
+        var settledFlexBank = monthReport.Days.FlexBalanceMinutes(today);
+        var settledDeficit = monthReport.Days.DeficitBalanceMinutes(today);
 
         var dtoDays = monthReport.Days.Select(d =>
         {
@@ -75,7 +71,6 @@ public static class MonthEndpoints
                 IsNonWorkingDay: !calendarDay.IsWorking,
                 Note: calendarDay.Note,
                 CalendarKind: calendarDay.Kind,
-                CalendarSource: calendarDay.Source,
                 PunchCount: src?.Punches.Count ?? 0,
                 PlannedMinutes: d.PlannedMinutes,
                 PunchedMinutes: d.PunchedMinutes,
