@@ -128,7 +128,7 @@ const totalWorkDays = computed(() => {
                     <tr v-for="d in visibleDays" :key="d.date">
                         <td class="mono">{{ fmtDateShort(d.date) }}<span v-if="d.isNonWorkingDay"
                                                                          class="badge"> OFF</span></td>
-                        <td class="mono">{{ `${d.eligibleMinutes}/${d.plannedMinutes}` }}</td>
+                        <td class="mono">{{ d.eligibleMinutes || '\u2014' }}</td>
                         <td class="mono" :class="deltaCls(d.flexDeltaMinutes)">{{
                                 d.flexDeltaMinutes !== 0 ? fmtMins(d.flexDeltaMinutes) : '\u2014'
                             }}
