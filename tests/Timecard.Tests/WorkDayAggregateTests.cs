@@ -37,6 +37,19 @@ public class WorkDayAggregateTests
         Assert.False(result.IsSuccess);
         Assert.Equal("Changing punch date is not supported in MVP.", result.Error!.Message);
     }
+
+    [Fact]
+    public void AddPunch_StoresUtcTimestamp()
+    {
+        var day = CreateDay();
+        var local = new DateTimeOffset(2026, 2, 1, 9, 0, 0, Offset);
+
+        var result = day.AddPunch(local, "start", TimeSpan.Zero, force: true);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(local.ToUniversalTime(), result.Value!.At);
+        Assert.Equal(TimeSpan.Zero, result.Value.At.Offset);
+    }
     
 
     // --- AttendanceRequest tests ---

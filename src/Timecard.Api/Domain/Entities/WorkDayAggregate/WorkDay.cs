@@ -26,14 +26,16 @@ public sealed class WorkDay : BaseEntity<int>
 
     public Result<PunchEvent> AddPunch(DateTimeOffset at, string? note, TimeSpan minInterval, bool force)
     {
-        var dateCheck = ValidatePunchDate(at);
+        var normalizedAt = at.ToUniversalTime();
+
+        var dateCheck = ValidatePunchDate(normalizedAt);
         if (!dateCheck.IsSuccess) return dateCheck.Error!;
 
         var last = _punches.OrderByDescending(p => p.At).FirstOrDefault();
-        if (!force && last is not null && (at - last.At) < minInterval)
+        if (!force && last is not null && (normalizedAt - last.At) < minInterval)
             return Errors.WorkDay.PunchTooFast;
 
-        var punch = new PunchEvent(at, note);
+        var punch = new PunchEvent(normalizedAt, note);
         _punches.Add(punch);
         return punch;
     }

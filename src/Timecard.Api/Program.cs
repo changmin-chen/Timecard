@@ -10,6 +10,7 @@ using Timecard.Api.Features.Calendar;
 using Timecard.Api.Features.Days;
 using Timecard.Api.Features.Month;
 using Timecard.Api.Features.Punch;
+using Timecard.Api.Features.Shared;
 using Timecard.Api.Features.SyncPunch;
 using Timecard.Api.Infrastructure.Data;
 
@@ -75,6 +76,7 @@ builder.Services.AddScoped<ICurrentUser, LocalCurrentUser>();
 builder.Services.AddScoped<WorkDayRepository>();
 builder.Services.AddScoped<IWorkCalendar, EfWorkCalendar>();
 builder.Services.AddScoped<DgpaCalendarImporter>();
+builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddProblemDetails(options => {
     options.CustomizeProblemDetails = ctx => {
         ctx.ProblemDetails.Extensions["traceId"] =

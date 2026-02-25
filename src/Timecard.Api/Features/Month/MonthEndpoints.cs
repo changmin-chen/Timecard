@@ -19,7 +19,7 @@ public static class MonthEndpoints
         return app;
     }
 
-    private static async Task<IResult> GetMonth(TimecardDb db, IWorkCalendar calendar, ICurrentUser currentUser, HttpContext http, int year, int month, bool includeEmpty, CancellationToken ct)
+    private static async Task<IResult> GetMonth(TimecardDb db, IWorkCalendar calendar, ICurrentUser currentUser, IClock clock, HttpContext http, int year, int month, bool includeEmpty, CancellationToken ct)
     {
         if (year is < 2000 or > 2100) return Results.BadRequest(new { error = "year out of range." });
         if (month is < 1 or > 12) return Results.BadRequest(new { error = "month out of range." });
@@ -56,7 +56,7 @@ public static class MonthEndpoints
 
         var monthReport = FlexTimePolicy.ComputeMonth(dailySummaries);
 
-        var today = TaiwanTime.Today();
+        var today = TaiwanTime.ToDate(clock.UtcNow);
         var settledFlexBank = monthReport.Days.FlexBalanceMinutes(today);
         var settledDeficit = monthReport.Days.DeficitBalanceMinutes(today);
 

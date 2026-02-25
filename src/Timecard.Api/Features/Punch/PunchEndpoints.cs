@@ -28,9 +28,9 @@ public static class PunchEndpoints
 
     public sealed record PunchCreate(DateTimeOffset? At, string? Note, bool Force);
 
-    private static async Task<IResult> AddPunch(WorkDayRepository repo, IWorkCalendar calendar, ICurrentUser currentUser, PunchCreate? req, HttpContext http, CancellationToken ct)
+    private static async Task<IResult> AddPunch(WorkDayRepository repo, IWorkCalendar calendar, ICurrentUser currentUser, IClock clock, PunchCreate? req, HttpContext http, CancellationToken ct)
     {
-        var now = req?.At ?? DateTimeOffset.UtcNow;
+        var now = (req?.At ?? clock.UtcNow).ToUniversalTime();
         var date = TaiwanTime.ToDate(now);
 
         var calendarResult = await calendar.GetRequiredDayAsync(CalendarId, date, ct);

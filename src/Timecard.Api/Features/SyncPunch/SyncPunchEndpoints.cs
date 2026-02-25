@@ -68,7 +68,7 @@ public static class SyncPunchEndpoints
                 continue;
             }
 
-            var result = day.AddPunch(entry.At.ToUniversalTime(), entry.Note, TimeSpan.Zero, force: true);
+            var result = day.AddPunch(entry.At, entry.Note, TimeSpan.Zero, force: true);
             if (!result.IsSuccess)
             {
                 errors.Add($"[{entry.EmployeeId}] {result.Error!.Message}");
