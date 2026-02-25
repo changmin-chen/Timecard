@@ -4,7 +4,7 @@ export function fmtTime(dt) {
   return new Intl.DateTimeFormat('zh-Hant', { hour: '2-digit', minute: '2-digit', hour12: false }).format(d)
 }
 
-export function mins(m) {
+export function fmtMins(m) {
   const sign = m > 0 ? '+' : ''
   return `${sign}${m}`
 }

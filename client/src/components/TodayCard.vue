@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { mins, fmtTime, fmtDate } from '../utils.js'
+import { fmtMins, fmtTime, fmtDate } from '../utils.js'
 import { useDay } from '../composables/useDay.js'
 import PunchList from './PunchList.vue'
 import AttendanceForm from './AttendanceForm.vue'
@@ -63,12 +63,12 @@ onMounted(() => refreshToday())
       <div class="stat-item">
         <span class="stat-label">工時差額</span>
         <span class="stat-value" :class="day.eligibleDeltaMinutes < 0 ? 'bad' : day.eligibleDeltaMinutes > 0 ? 'good' : ''">
-          {{ mins(day.eligibleDeltaMinutes) }} 分
+          {{ fmtMins(day.eligibleDeltaMinutes) }} 分
         </span>
       </div>
       <div class="stat-item">
         <span class="stat-label">今日彈性</span>
-        <span class="stat-value">{{ mins(day.flexDeltaMinutes) }} 分</span>
+        <span class="stat-value">{{ fmtMins(day.flexDeltaMinutes) }} 分</span>
       </div>
       <button
         class="stat-item stat-punch-toggle"

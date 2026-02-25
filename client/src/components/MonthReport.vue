@@ -1,6 +1,6 @@
 <script setup>
 import {ref, computed, onMounted, watch} from 'vue'
-import {mins} from '../utils.js'
+import {fmtMins} from '../utils.js'
 import {useMonth} from '../composables/useMonth.js'
 import {useMonthInvalidation} from '../composables/useMonthInvalidation.js'
 
@@ -80,7 +80,8 @@ const totalWorkDays = computed(() => {
         <div class="row">
             <div>
                 <h2>月報表</h2>
-                <div class="hint">預設僅顯示今日（含）以前的有紀錄日期。勾選「顯示所有日期」可列出當月完整記錄（含未出勤日）。</div>
+                <div class="hint">預設僅顯示今日（含）以前的有紀錄日期。勾選「顯示所有日期」可列出當月完整記錄（含未出勤日）。
+                </div>
             </div>
             <div class="actions">
                 <input type="month" v-model="monthPick"/>
@@ -95,7 +96,7 @@ const totalWorkDays = computed(() => {
             <div class="month-stat-card">
                 <span class="month-stat-label">彈性餘額</span>
                 <span class="month-stat-value" :class="deltaCls(month.settledFlexBankMinutes)">{{
-                        mins(month.settledFlexBankMinutes)
+                        fmtMins(month.settledFlexBankMinutes)
                     }} 分</span>
             </div>
             <div class="month-stat-card">
@@ -127,13 +128,15 @@ const totalWorkDays = computed(() => {
                     <tr v-for="d in visibleDays" :key="d.date">
                         <td class="mono">{{ fmtDateShort(d.date) }}<span v-if="d.isNonWorkingDay"
                                                                          class="badge"> OFF</span></td>
-                        <td class="mono">{{ d.eligibleMinutes || '\u2014' }}</td>
+                        <td class="mono">{{ `${d.eligibleMinutes}/${d.plannedMinutes}` }}</td>
                         <td class="mono" :class="deltaCls(d.flexDeltaMinutes)">{{
-                                d.flexDeltaMinutes !== 0 ? mins(d.flexDeltaMinutes) : '\u2014'
-                            }}</td>
+                                d.flexDeltaMinutes !== 0 ? fmtMins(d.flexDeltaMinutes) : '\u2014'
+                            }}
+                        </td>
                         <td class="mono" :class="deficitCls(d.deficitMinutes)">{{
                                 d.deficitMinutes || ''
-                            }}</td>
+                            }}
+                        </td>
                         <td>{{ d.note || '' }}</td>
                     </tr>
                     </tbody>
