@@ -1,20 +1,23 @@
 ﻿namespace Timecard.Api.Features.Month;
 
+public sealed record MonthDayAttendanceDto(string Category, TimeOnly Start, TimeOnly End, string? Note);
 
 public sealed record MonthDayDto(
-    string Date,
+    DateOnly Date,
     bool Exists,
     bool IsNonWorkingDay,
     string Note,
     string CalendarKind,
-    string CalendarSource,
+    DateTimeOffset? Start,
+    DateTimeOffset? End,
     int PunchCount,
     int PlannedMinutes,
     int PunchedMinutes,
     int EligibleMinutes,
     int EligibleDeltaMinutes,
     int FlexDeltaMinutes,
-    int DeficitMinutes
+    int DeficitMinutes,
+    IReadOnlyList<MonthDayAttendanceDto> AttendanceRequests
 );
 
 

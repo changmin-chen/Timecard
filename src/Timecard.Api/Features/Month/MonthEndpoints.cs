@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Domain;
 using Timecard.Api.Domain.Entities.WorkDayAggregate;
+using Timecard.Api.Domain.Results;
 using Timecard.Api.Features.Auth;
 using Timecard.Api.Features.Calendar;
 using Timecard.Api.Features.Shared;
@@ -19,7 +20,7 @@ public static class MonthEndpoints
         return app;
     }
 
-    private static async Task<IResult> GetMonth(TimecardDb db, IWorkCalendar calendar, ICurrentUser currentUser, HttpContext http, int year, int month, bool includeEmpty, CancellationToken ct)
+    private static async Task<IResult> GetMonth(TimecardDb db, IWorkCalendar calendar, ICurrentUser currentUser, IClock clock, HttpContext http, int year, int month, bool includeEmpty, CancellationToken ct)
     {
         if (year is < 2000 or > 2100) return Results.BadRequest(new { error = "year out of range." });
         if (month is < 1 or > 12) return Results.BadRequest(new { error = "month out of range." });
@@ -44,8 +45,7 @@ public static class MonthEndpoints
             ? Enumerable.Range(0, endExclusive.DayNumber - start.DayNumber).Select(i => start.AddDays(i))
             : workDays.Select(d => d.Date);
 
-        var dailySummaries = dates.Select(date =>
-        {
+        var dailySummaries = dates.Select(date => {
             workDayMap.TryGetValue(date, out var day);
             bool isWorking = calendarDays[date].IsWorking;
             var facts = day is not null
@@ -56,33 +56,37 @@ public static class MonthEndpoints
 
         var monthReport = FlexTimePolicy.ComputeMonth(dailySummaries);
 
-        var today = TaiwanTime.Today();
-        var settledFlexBank = monthReport.Days
-            .Where(d => d.Date <= today && d.PlannedMinutes != 0)
-            .Sum(d => d.FlexDeltaMinutes);
-        var settledDeficit = monthReport.Days
-            .Where(d => d.Date <= today)
-            .Sum(d => d.DeficitMinutes);
+        var today = TaiwanTime.ToDate(clock.UtcNow);
+        var settlementCutoff = today.AddDays(-1); // 截至昨日，避免今日進行中工作日顯示假赤字
+        var settledFlexBank = monthReport.Days.FlexBalanceMinutes(settlementCutoff);
+        var settledDeficit  = monthReport.Days.DeficitBalanceMinutes(settlementCutoff);
 
-        var dtoDays = monthReport.Days.Select(d =>
-        {
+        var dtoDays = monthReport.Days.Select(d => {
             workDayMap.TryGetValue(d.Date, out WorkDay? src);
             ResolvedCalendarDay calendarDay = calendarDays[d.Date];
+            var (punchStart, punchEnd) = src?.GetPunchTimestamps() ?? (null, null);
 
             return new MonthDayDto(
-                Date: d.Date.ToString("yyyy-MM-dd"),
-                Exists: src is not null,
-                IsNonWorkingDay: !calendarDay.IsWorking,
-                Note: calendarDay.Note,
-                CalendarKind: calendarDay.Kind,
-                CalendarSource: calendarDay.Source,
-                PunchCount: src?.Punches.Count ?? 0,
-                PlannedMinutes: d.PlannedMinutes,
-                PunchedMinutes: d.PunchedMinutes,
-                EligibleMinutes: d.EligibleMinutes,
-                EligibleDeltaMinutes: d.EligibleDeltaMinutes,
-                FlexDeltaMinutes: d.FlexDeltaMinutes,
-                DeficitMinutes: d.DeficitMinutes
+            Date: d.Date,
+            Exists: src is not null,
+            IsNonWorkingDay: !calendarDay.IsWorking,
+            Note: calendarDay.Note,
+            CalendarKind: calendarDay.Kind,
+            Start: punchStart,
+            End: punchEnd,
+            PunchCount: src?.Punches.Count ?? 0,
+            PlannedMinutes: d.PlannedMinutes,
+            PunchedMinutes: d.PunchedMinutes,
+            EligibleMinutes: d.EligibleMinutes,
+            EligibleDeltaMinutes: d.EligibleDeltaMinutes,
+            FlexDeltaMinutes: d.FlexDeltaMinutes,
+            DeficitMinutes: d.DeficitMinutes,
+            AttendanceRequests: src?.AttendanceRequests
+                .Select(r => new MonthDayAttendanceDto(r.Category,
+                    r.Range.Start,
+                    r.Range.End,
+                    r.Note))
+                .ToList() ?? []
             );
         }).ToList();
 
