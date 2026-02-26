@@ -89,7 +89,7 @@ function getCellBadges(d) {
 
     const all = []
     if (d.start) {
-        const isLate = startMinutesTW(d.start) > 9 * 60
+        const isLate = startMinutesTW(d.start) > 10 * 60  // AM 10:00
         all.push({ text: fmtStartTimeTW(d.start), cls: isLate ? 'punch-late' : 'punch-ok' })
     } else if (!d.attendanceRequests?.length) {
         all.push({ text: '缺勤', cls: 'absent' })
