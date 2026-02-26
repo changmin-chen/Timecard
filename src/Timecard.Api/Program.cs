@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using Serilog.Events;
 using Timecard.Api.Domain.Entities;
 using Timecard.Api.Features.AttendanceRequests;
 using Timecard.Api.Features.Auth;
@@ -92,6 +93,7 @@ builder.Services.AddProblemDetails(options => {
 });
 
 var app = builder.Build();
+var slowRequestThresholdMs = builder.Configuration.GetValue<double?>("RequestLogging:SlowRequestThresholdMs") ?? 1000;
 
 {
     await using var scope = app.Services.CreateAsyncScope();
@@ -164,7 +166,17 @@ app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseDefaultFiles();
 app.UseStaticFiles();
-app.UseSerilogRequestLogging();
+app.UseSerilogRequestLogging(options => {
+    options.GetLevel = (httpContext, elapsed, ex) => {
+        if (ex is not null || httpContext.Response.StatusCode >= StatusCodes.Status500InternalServerError)
+            return LogEventLevel.Error;
+
+        if (httpContext.Response.StatusCode >= StatusCodes.Status400BadRequest || elapsed >= slowRequestThresholdMs)
+            return LogEventLevel.Warning;
+
+        return LogEventLevel.Debug;
+    };
+});
 app.UseAuthentication();
 app.UseAuthorization();
 
