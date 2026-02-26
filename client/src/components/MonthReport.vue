@@ -1,6 +1,6 @@
 <script setup>
 import {ref, computed, onMounted, watch} from 'vue'
-import {fmtMins, minsToHMLabeled, fmtMinsHMLabeled, fmtTime, categoryLabel, categoryClass} from '../utils.js'
+import {fmtMins, minsToHMLabeled, fmtMinsHMLabeled, fmtTime, categoryLabel} from '../utils.js'
 import {useMonth} from '../composables/useMonth.js'
 import {useMonthInvalidation} from '../composables/useMonthInvalidation.js'
 
@@ -95,7 +95,7 @@ function getCellBadges(d) {
         all.push({ text: '缺勤', cls: 'absent' })
     }
     for (const r of (d.attendanceRequests || [])) {
-        all.push({ text: categoryLabel(r.category), cls: categoryClass(r.category) || '' })
+        all.push({ text: categoryLabel(r.category), cls: 'request' })
     }
     return all
 }
