@@ -1,20 +1,29 @@
 <script setup>
-import TodayCard from './components/TodayCard.vue'
-import MonthReport from './components/MonthReport.vue'
+import { onMounted } from 'vue'
+import AppLayout from './components/AppLayout.vue'
+import LoginView from './components/LoginView.vue'
+import ChangePasswordView from './components/ChangePasswordView.vue'
+import { useAuth, signalUnauthorized } from './composables/useAuth.js'
+import { setUnauthorizedHandler } from './api.js'
+
+const { user, isChecking, checkAuth, logout } = useAuth()
+
+onMounted(async () => {
+  setUnauthorizedHandler(signalUnauthorized)
+  await checkAuth()
+})
 </script>
 
 <template>
-  <header class="wrap">
-    <h1>Timecard MVP（Punch-only）</h1>
-    <p class="sub">打卡只有「時間戳」。日工時用最早到最晚。中間亂走一律當不存在，因為你也不想記。</p>
-  </header>
+  <!-- Blank while the /api/auth/me probe is in flight -->
+  <template v-if="isChecking" />
 
-  <main class="wrap">
-    <TodayCard />
-    <MonthReport />
+  <!-- Login page -->
+  <LoginView v-else-if="!user" />
 
-    <footer class="wrap small">
-      <div class="hint">資料存在 PostgreSQL。刪掉資料庫或資料表會清空既有資料。</div>
-    </footer>
-  </main>
+  <!-- Force password change on first login -->
+  <ChangePasswordView v-else-if="user.mustChangePassword" />
+
+  <!-- Main app -->
+  <AppLayout v-else :user="user" @logout="logout" />
 </template>

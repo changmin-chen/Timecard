@@ -1,0 +1,142 @@
+using Timecard.Api.Domain;
+using Timecard.Api.Domain.Results;
+
+namespace Timecard.Api.Domain.Entities.WorkDayAggregate;
+
+public sealed class WorkDay : BaseEntity<int>
+{
+    private readonly List<PunchEvent> _punches = [];
+    private readonly List<AttendanceRequest> _attendanceRequests = [];
+
+    private WorkDay()
+    {
+    }
+
+    public WorkDay(string userId, DateOnly date)
+    {
+        UserId = userId;
+        Date = date;
+    }
+
+    public string UserId { get; private set; } = "";
+    public DateOnly Date { get; private set; }
+
+    public IReadOnlyCollection<PunchEvent> Punches => _punches.AsReadOnly();
+    public IReadOnlyCollection<AttendanceRequest> AttendanceRequests => _attendanceRequests.AsReadOnly();
+
+    public Result<PunchEvent> AddPunch(DateTimeOffset at, string? note, TimeSpan minInterval, bool force)
+    {
+        var normalizedAt = at.ToUniversalTime();
+
+        var dateCheck = ValidatePunchDate(normalizedAt);
+        if (!dateCheck.IsSuccess) return dateCheck.Error!;
+
+        var last = _punches.OrderByDescending(p => p.At).FirstOrDefault();
+        if (!force && last is not null && (normalizedAt - last.At) < minInterval)
+            return Errors.WorkDay.PunchTooFast;
+
+        var punch = new PunchEvent(normalizedAt, note);
+        _punches.Add(punch);
+        return punch;
+    }
+
+    public Result RemovePunch(int punchId)
+    {
+        var punch = _punches.FirstOrDefault(p => p.Id == punchId);
+        if (punch is null)
+            return Errors.WorkDay.PunchNotFound;
+
+        _punches.Remove(punch);
+        return Result.Ok();
+    }
+
+
+    public Result<AttendanceRequest> AddAttendanceRequest(string category, TimeRange range, string? note)
+    {
+        var overlapCheck = ValidateNoOverlap(range, excludeId: null);
+        if (!overlapCheck.IsSuccess) return overlapCheck.Error!;
+
+        var gapCheck = ValidateRequestAgainstPunchSpan(range, excludeId: null);
+        if (!gapCheck.IsSuccess) return gapCheck.Error!;
+
+        var newAttendance = new AttendanceRequest(category, range, note);
+        _attendanceRequests.Add(newAttendance);
+        return newAttendance;
+    }
+
+    public Result UpdateAttendanceRequest(int id, string category, TimeRange range, string? note)
+    {
+        var request = _attendanceRequests.FirstOrDefault(a => a.Id == id);
+        if (request is null)
+            return Errors.WorkDay.AttendanceNotFound;
+
+        var overlapCheck = ValidateNoOverlap(range, excludeId: id);
+        if (!overlapCheck.IsSuccess) return overlapCheck;
+
+        var gapCheck = ValidateRequestAgainstPunchSpan(range, excludeId: id);
+        if (!gapCheck.IsSuccess) return gapCheck;
+
+        request.Update(category, range, note);
+        return Result.Ok();
+    }
+
+    public Result RemoveAttendanceRequest(int id)
+    {
+        var request = _attendanceRequests.FirstOrDefault(a => a.Id == id);
+        if (request is null)
+            return Errors.WorkDay.AttendanceNotFound;
+
+        _attendanceRequests.Remove(request);
+        return Result.Ok();
+    }
+
+    private Result ValidateNoOverlap(TimeRange range, int? excludeId)
+    {
+        foreach (var existing in _attendanceRequests)
+        {
+            if (excludeId.HasValue && existing.Id == excludeId.Value) continue;
+
+            if (range.Overlaps(existing.Range))
+                return Errors.WorkDay.Overlap;
+        }
+
+        return Result.Ok();
+    }
+
+    private Result ValidateRequestAgainstPunchSpan(TimeRange range, int? excludeId)
+    {
+        var segments = new List<TimeRange> { range };
+
+        if (GetPunchSpan() is { } punchSpan)
+            segments.Add(punchSpan);
+
+        foreach (var r in _attendanceRequests)
+        {
+            if (excludeId.HasValue && r.Id == excludeId.Value) continue;
+            segments.Add(r.Range);
+        }
+
+        return segments.HasGaps()
+            ? Errors.WorkDay.HasGap
+            : Result.Ok();
+    }
+
+    private TimeRange? GetPunchSpan()
+    {
+        var ordered = _punches.OrderBy(p => p.At).ToList();
+        if (ordered.Count < 2) return null;
+
+        var start = TaiwanTime.ToTime(ordered[0].At);
+        var end = TaiwanTime.ToTime(ordered[^1].At);
+        return new TimeRange(start, end);
+    }
+
+    private Result ValidatePunchDate(DateTimeOffset at)
+    {
+        var punchDate = TaiwanTime.ToDate(at);
+        if (punchDate != Date)
+            return Errors.WorkDay.InvalidPunchDate;
+
+        return Result.Ok();
+    }
+}

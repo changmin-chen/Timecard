@@ -1,48 +1,47 @@
-using Timecard.Api.Data;
+using Timecard.Api.Domain.Entities.WorkDayAggregate;
+using Timecard.Api.Domain;
+using Timecard.Api.Features.Auth;
+using Timecard.Api.Features.Calendar;
 using Timecard.Api.Features.Shared;
+using Timecard.Api.Infrastructure.Data;
 
 namespace Timecard.Api.Features.Days;
 
 public static class DayEndpoints
 {
+    private const string CalendarId = CalendarConstants.TaiwanDgpaCalendarId;
+
     public static IEndpointRouteBuilder MapDayEndpoints(this IEndpointRouteBuilder app)
     {
         var g = app.MapGroup("/api/day").WithTags("Day");
 
         g.MapGet("/today", GetToday);
         g.MapGet("/{date}", GetByDate);
-        g.MapPut("/{date}/nonworking", SetNonWorking);
 
         return app;
     }
 
-    public sealed record NonWorkingRequest(bool IsNonWorkingDay, string? Note);
-
-    private static async Task<IResult> GetToday(WorkDayRepository repo, CancellationToken ct)
+    private static async Task<IResult> GetToday(WorkDayRepository repo, IWorkCalendar calendar, ICurrentUser currentUser, IClock clock, HttpContext http, CancellationToken ct)
     {
-        var date = DateOnly.FromDateTime(DateTime.Now);
-        var day = await repo.LoadDay(date, ct);
-        return Results.Ok(Mapping.ToDayDto(date, day));
+        var date = TaiwanTime.ToDate(clock.UtcNow);
+        WorkDay? maybeDay = await repo.LoadDay(currentUser.UserId, date, ct);
+
+        var calendarResult = await calendar.GetRequiredDayAsync(CalendarId, date, ct);
+        if (!calendarResult.IsSuccess) return calendarResult.Error!.ToProblem(http);
+
+        return Results.Ok(DayMapping.ToDayResponse(date, maybeDay, calendarResult.Value!));
     }
 
-    private static async Task<IResult> GetByDate(WorkDayRepository repo, string date, CancellationToken ct)
+    private static async Task<IResult> GetByDate(WorkDayRepository repo, IWorkCalendar calendar, ICurrentUser currentUser, HttpContext http, string date, CancellationToken ct)
     {
         if (!DateOnly.TryParse(date, out var d))
             return Results.BadRequest(new { error = "Invalid date. Use yyyy-MM-dd." });
 
-        var day = await repo.LoadDay(d, ct);
-        return Results.Ok(Mapping.ToDayDto(d, day));
-    }
+        WorkDay? maybeDay = await repo.LoadDay(currentUser.UserId, d, ct);
 
-    private static async Task<IResult> SetNonWorking(WorkDayRepository repo, string date, NonWorkingRequest req, CancellationToken ct)
-    {
-        if (!DateOnly.TryParse(date, out var d))
-            return Results.BadRequest(new { error = "Invalid date. Use yyyy-MM-dd." });
+        var calendarResult = await calendar.GetRequiredDayAsync(CalendarId, d, ct);
+        if (!calendarResult.IsSuccess) return calendarResult.Error!.ToProblem(http);
 
-        var day = await repo.GetOrCreateDay(d, ct);
-        day.SetNonWorking(req.IsNonWorkingDay, req.Note);
-
-        await repo.SaveChangesAsync(ct);
-        return Results.Ok(Mapping.ToDayDto(day));
+        return Results.Ok(DayMapping.ToDayResponse(d, maybeDay, calendarResult.Value!));
     }
 }

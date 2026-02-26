@@ -1,23 +1,45 @@
 <script setup>
 import { fmtTime } from '../utils.js'
 
-const props = defineProps({
+defineProps({
   punches: { type: Array, required: true },
 })
-const emit = defineEmits(['delete'])
 </script>
 
 <template>
-  <h3>Punches</h3>
-  <div v-if="!punches.length" class="hint">尚無 punch。按「打卡」新增一筆。</div>
+  <div class="punch-list-header">
+    <h3>打卡紀錄</h3>
+    <span class="sync-badge">外部同步</span>
+  </div>
+  <div v-if="!punches.length" class="hint">尚無打卡紀錄（等待外部系統同步）。</div>
   <div v-for="p in punches" :key="p.id" class="item">
     <div class="meta">
-      <div class="title">#{{ p.id }} {{ fmtTime(p.at) }}</div>
-      <div class="sub">{{ p.at }}{{ p.note ? ` | ${p.note}` : '' }}</div>
-    </div>
-    <div class="right">
-      <button class="danger" @click="emit('delete', p.id)">刪除</button>
+      <div class="title">{{ fmtTime(p.at) }}</div>
+      <div v-if="p.note" class="note-text">{{ p.note }}</div>
     </div>
   </div>
-  <div class="hint">日 span = 最早 punch → 最晚 punch。若只有 1 筆 punch，工時 = 0（因為你還沒下班）。</div>
 </template>
+
+<style scoped>
+.punch-list-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.punch-list-header h3 {
+  margin: 14px 0 8px;
+}
+
+.sync-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 1px 8px;
+  background: #f9fafb;
+  letter-spacing: 0.02em;
+  margin-top: 6px;
+}
+</style>

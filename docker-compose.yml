@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: timecard-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-timecard}
+      POSTGRES_USER: ${POSTGRES_USER:-timecard_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_strong_password}
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT}:5432"
+    volumes:
+      - timecard_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-timecard_app} -d ${POSTGRES_DB:-timecard}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  timecard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: timecard:local
+    container_name: timecard
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Timecard: Host=postgres;Port=5432;Database=${POSTGRES_DB:-timecard};Username=${POSTGRES_USER:-timecard_app};Password=${POSTGRES_PASSWORD}
+      InitialAdmin__Password: ${INITIAL_ADMIN_PASSWORD}
+      SyncPunch__ApiKey: ${SYNC_PUNCH_API_KEY}
+    ports:
+      - "${TIMECARD_BIND_IP}:49178:8080"
+
+volumes:
+  timecard_pgdata:

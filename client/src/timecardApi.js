@@ -4,7 +4,37 @@ import { createApiClient } from "./api.js";
 const client = createApiClient({ baseUrl: "" });
 
 export const timecardApi = {
+    login: (email, password) =>
+        client.request("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password }),
+        }),
+
+    changePassword: (currentPassword, newPassword) =>
+        client.request("/api/auth/change-password", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ currentPassword, newPassword }),
+        }),
+
+    createUser: (email, employeeId, displayName, temporaryPassword) =>
+        client.request("/api/admin/users", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, employeeId, displayName, temporaryPassword }),
+        }),
+
+    listUsers: () => client.request("/api/admin/users"),
+
+    resetUserPassword: (id) =>
+        client.request(`/api/admin/users/${id}/reset-password`, {
+            method: "POST",
+        }),
+
     getToday: () => client.request("/api/day/today"),
+
+    getDay: (date) => client.request(`/api/day/${date}`),
 
     punch: () => client.request("/api/punch", { method: "POST" }),
 
@@ -20,13 +50,6 @@ export const timecardApi = {
 
     deleteAttendanceRequest: (id) =>
         client.request(`/api/attendance-requests/${id}`, { method: "DELETE" }),
-
-    setNonWorking: (date, payload) =>
-        client.request(`/api/day/${date}/nonworking`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        }),
 
     getMonth: (y, m, includeEmpty) =>
         client.request(`/api/month/${y}/${m}?includeEmpty=${includeEmpty}`)
