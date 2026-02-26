@@ -10,6 +10,31 @@ const {month, loading, loadMonth} = useMonth()
 const {monthStale} = useMonthInvalidation()
 
 const monthPick = ref('')
+const monthInputRef = ref(null)
+
+const monthLabel = computed(() => {
+    const match = /^(\d{4})-(\d{2})$/.exec(monthPick.value)
+    if (!match) return ''
+    return `${match[1]}年${Number(match[2])}月`
+})
+
+function prevMonth() {
+    const match = /^(\d{4})-(\d{2})$/.exec(monthPick.value)
+    if (!match) return
+    const d = new Date(Number(match[1]), Number(match[2]) - 2, 1)
+    monthPick.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+function nextMonth() {
+    const match = /^(\d{4})-(\d{2})$/.exec(monthPick.value)
+    if (!match) return
+    const d = new Date(Number(match[1]), Number(match[2]), 1)
+    monthPick.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+function openMonthPicker() {
+    monthInputRef.value?.showPicker?.()
+}
 
 onMounted(() => {
     const now = new Date()
@@ -140,10 +165,20 @@ function isTodayInProgress(d) {
 
 <template>
     <section class="card">
-        <div class="row">
-            <h2>月報表</h2>
-            <div class="actions">
-                <input type="month" v-model="monthPick"/>
+        <div class="mnav-wrap">
+            <div class="mnav-core">
+                <button class="nav-arrow" @click="prevMonth" :disabled="loading">‹</button>
+                <div class="mnav-trigger" @click="openMonthPicker">
+                    <span class="mnav-label">{{ monthLabel }}</span>
+                    <input
+                        ref="monthInputRef"
+                        type="month"
+                        class="hidden-picker"
+                        v-model="monthPick"
+                        :disabled="loading"
+                    />
+                </div>
+                <button class="nav-arrow" @click="nextMonth" :disabled="loading">›</button>
             </div>
         </div>
 
@@ -246,3 +281,65 @@ function isTodayInProgress(d) {
         </div>
     </section>
 </template>
+
+<style scoped>
+.mnav-wrap {
+    margin-bottom: 14px;
+}
+.mnav-core {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.nav-arrow {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .15s ease;
+    line-height: 1;
+}
+.nav-arrow:hover:not(:disabled) {
+    background: rgba(37, 99, 235, .08);
+    color: var(--primary);
+    border-color: rgba(37, 99, 235, .3);
+    filter: none;
+}
+.nav-arrow:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+.mnav-trigger {
+    position: relative;
+    cursor: pointer;
+    padding: 0 6px;
+}
+.mnav-label {
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--text);
+    letter-spacing: -0.01em;
+    transition: color .15s ease;
+    user-select: none;
+}
+.mnav-trigger:hover .mnav-label {
+    color: var(--primary);
+}
+.hidden-picker {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    height: 0;
+    top: 0;
+    left: 0;
+}
+</style>
