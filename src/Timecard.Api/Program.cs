@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 using Timecard.Api.Domain.Entities;
 using Timecard.Api.Features.AttendanceRequests;
 using Timecard.Api.Features.Auth;
@@ -15,6 +16,11 @@ using Timecard.Api.Features.SyncPunch;
 using Timecard.Api.Infrastructure.Data;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((ctx, services, loggerConfiguration) => loggerConfiguration
+    .ReadFrom.Configuration(ctx.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext());
 
 builder.Services.ConfigureHttpJsonOptions(o => {
     o.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
@@ -75,6 +81,7 @@ builder.Services.AddAuthorizationBuilder()
 builder.Services.AddScoped<ICurrentUser, LocalCurrentUser>();
 builder.Services.AddScoped<WorkDayRepository>();
 builder.Services.AddScoped<IWorkCalendar, EfWorkCalendar>();
+builder.Services.AddScoped<SyncPunchHandler>();
 builder.Services.AddScoped<DgpaCalendarImporter>();
 builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddProblemDetails(options => {
@@ -157,6 +164,7 @@ app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseDefaultFiles();
 app.UseStaticFiles();
+app.UseSerilogRequestLogging();
 app.UseAuthentication();
 app.UseAuthorization();
 
