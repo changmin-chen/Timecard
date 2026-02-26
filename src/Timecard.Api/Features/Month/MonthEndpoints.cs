@@ -57,8 +57,9 @@ public static class MonthEndpoints
         var monthReport = FlexTimePolicy.ComputeMonth(dailySummaries);
 
         var today = TaiwanTime.ToDate(clock.UtcNow);
-        var settledFlexBank = monthReport.Days.FlexBalanceMinutes(today);
-        var settledDeficit = monthReport.Days.DeficitBalanceMinutes(today);
+        var settlementCutoff = today.AddDays(-1); // 截至昨日，避免今日進行中工作日顯示假赤字
+        var settledFlexBank = monthReport.Days.FlexBalanceMinutes(settlementCutoff);
+        var settledDeficit  = monthReport.Days.DeficitBalanceMinutes(settlementCutoff);
 
         var dtoDays = monthReport.Days.Select(d => {
             workDayMap.TryGetValue(d.Date, out WorkDay? src);

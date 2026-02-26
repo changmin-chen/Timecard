@@ -131,6 +131,11 @@ const firstDayOffset = computed(() => {
 function isToday(dateStr) {
     return !!month.value && dateStr === month.value.asOf
 }
+
+// AsOf日（今日）視為進行中，尚未納入結算；AsOf前已結算，AsOf後為未來
+function isTodayInProgress(d) {
+    return isToday(d.date)
+}
 </script>
 
 <template>
@@ -214,14 +219,18 @@ function isToday(dateStr) {
                         <td class="mono">{{ fmtTime(d.start) }}</td>
                         <td class="mono">{{ fmtTime(d.end) }}</td>
                         <td class="mono">{{ d.eligibleMinutes ? minsToHMLabeled(d.eligibleMinutes) : '\u2014' }}</td>
-                        <td class="mono" :class="deltaCls(d.flexDeltaMinutes)">{{ fmtMinsHMLabeled(d.flexDeltaMinutes) }}</td>
-                        <td class="mono" :class="deficitCls(d.deficitMinutes)">{{ d.deficitMinutes ? minsToHMLabeled(d.deficitMinutes) : '' }}</td>
+                        <!-- 進行中時不套色、顯示佔位符，避免顯示尚未完整計算的彈性/不足數值 -->
+                        <td class="mono" :class="isTodayInProgress(d) ? '' : deltaCls(d.flexDeltaMinutes)">{{ isTodayInProgress(d) ? '\u2014' : fmtMinsHMLabeled(d.flexDeltaMinutes) }}</td>
+                        <td class="mono" :class="isTodayInProgress(d) ? '' : deficitCls(d.deficitMinutes)">{{ isTodayInProgress(d) ? '' : (d.deficitMinutes ? minsToHMLabeled(d.deficitMinutes) : '') }}</td>
                         <td class="status-cell">
                             <template v-if="d.isNonWorkingDay">
                                 <span class="st-tag st-dim"><span class="sym sym-diamond"></span>{{ d.note || '非工作日' }}</span>
                             </template>
                             <template v-else-if="d.attendanceRequests?.length">
                                 <span v-for="r in d.attendanceRequests" :key="r.category" class="st-tag st-dim st-req"><span class="sym sym-diamond"></span>{{ categoryLabel(r.category) }}</span>
+                            </template>
+                            <template v-else-if="isTodayInProgress(d)">
+                                <span class="st-tag st-dim"><span class="sym sym-circle"></span>進行中</span>
                             </template>
                             <template v-else-if="d.start">
                                 <span class="st-tag st-dim"><span class="sym sym-circle"></span>正常</span>
