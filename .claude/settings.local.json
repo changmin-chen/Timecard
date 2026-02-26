@@ -6,7 +6,8 @@
       "Bash(npm install:*)",
       "Bash(npm run build:*)",
       "Bash(node -e:*)",
-      "Bash(dotnet ef migrations add:*)"
+      "Bash(dotnet ef migrations add:*)",
+      "Bash(git check-ignore:*)"
     ]
   }
 }
