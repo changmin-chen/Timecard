@@ -41,10 +41,11 @@ public sealed class WorkDayRepository(TimecardDb db)
         var day = await LoadDay(userId, date, ct);
         if (day is not null) return day;
 
-        await db.Database.ExecuteSqlInterpolatedAsync($@"
-INSERT INTO ""WorkDays"" (""UserId"", ""Date"")
-VALUES ({userId}, {date})
-ON CONFLICT (""UserId"", ""Date"") DO NOTHING;", ct);
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+                                                       INSERT INTO "WorkDays" ("UserId", "Date")
+                                                       VALUES ({userId}, {date})
+                                                       ON CONFLICT ("UserId", "Date") DO NOTHING;
+                                                       """, ct);
 
         day = await LoadDay(userId, date, ct);
         if (day is null)

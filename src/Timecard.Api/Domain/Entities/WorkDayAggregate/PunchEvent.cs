@@ -9,6 +9,9 @@ public sealed class PunchEvent : BaseEntity<int>
 
     internal PunchEvent(DateTimeOffset at, string? note)
     {
+        if (at.Offset != TimeSpan.Zero)
+            throw new ArgumentException("At must be in UTC timezone.");
+        
         At = at;
         Note = note?.Trim() ?? "";
     }

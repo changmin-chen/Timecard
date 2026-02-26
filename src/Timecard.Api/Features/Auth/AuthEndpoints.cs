@@ -11,7 +11,7 @@ public static class AuthEndpoints
         var g = app.MapGroup("/api/auth").WithTags("Auth");
 
         g.MapPost("/login", Login).AllowAnonymous();
-        g.MapPost("/logout", (Delegate)Logout).AllowAnonymous();
+        g.MapPost("/logout", Logout).AllowAnonymous();
         g.MapGet("/me", Me).RequireAuthorization();
         g.MapPost("/change-password", ChangePassword).RequireAuthorization();
 

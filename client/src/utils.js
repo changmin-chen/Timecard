@@ -4,9 +4,37 @@ export function fmtTime(dt) {
   return new Intl.DateTimeFormat('zh-Hant', { hour: '2-digit', minute: '2-digit', hour12: false }).format(d)
 }
 
-export function mins(m) {
+export function fmtMins(m) {
   const sign = m > 0 ? '+' : ''
   return `${sign}${m}`
+}
+
+// 520 → "8:40" | 9 → "0:09"
+export function minsToHM(m) {
+  const abs = Math.abs(m)
+  return `${Math.floor(abs / 60)}:${String(abs % 60).padStart(2, '0')}`
+}
+
+// signed: +55 → "+0:55" | -30 → "-0:30" | 0 → "0:00"
+export function fmtMinsHM(m) {
+  if (m === 0) return '0:00'
+  return (m > 0 ? '+' : '-') + minsToHM(m)
+}
+
+// 90 → "1h 30m" | 45 → "45m" | 60 → "1h"
+export function minsToHMLabeled(m) {
+  const abs = Math.abs(m)
+  const h = Math.floor(abs / 60)
+  const min = abs % 60
+  if (h > 0 && min > 0) return `${h}h ${min}m`
+  if (h > 0) return `${h}h`
+  return `${min}m`
+}
+
+// signed: +90 → "+1h 30m" | -45 → "-45m" | 0 → "—"
+export function fmtMinsHMLabeled(m) {
+  if (m === 0) return '\u2014'
+  return (m > 0 ? '+' : '-') + minsToHMLabeled(m)
 }
 
 const weekdays = ['日', '一', '二', '三', '四', '五', '六']

@@ -21,9 +21,9 @@ public static class DayEndpoints
         return app;
     }
 
-    private static async Task<IResult> GetToday(WorkDayRepository repo, IWorkCalendar calendar, ICurrentUser currentUser, HttpContext http, CancellationToken ct)
+    private static async Task<IResult> GetToday(WorkDayRepository repo, IWorkCalendar calendar, ICurrentUser currentUser, IClock clock, HttpContext http, CancellationToken ct)
     {
-        var date = TaiwanTime.Today();
+        var date = TaiwanTime.ToDate(clock.UtcNow);
         WorkDay? maybeDay = await repo.LoadDay(currentUser.UserId, date, ct);
 
         var calendarResult = await calendar.GetRequiredDayAsync(CalendarId, date, ct);

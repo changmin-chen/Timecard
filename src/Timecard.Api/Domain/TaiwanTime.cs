@@ -9,7 +9,4 @@ public static class TaiwanTime
 
     public static TimeOnly ToTime(DateTimeOffset value)
         => TimeOnly.FromTimeSpan(value.ToOffset(UtcOffset).TimeOfDay);
-
-    public static DateOnly Today()
-        => ToDate(DateTimeOffset.UtcNow);
 }
