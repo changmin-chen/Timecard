@@ -104,8 +104,10 @@ public static class AuthEndpoints
             return Results.BadRequest(new { message });
         }
 
-        // Re-auth required after a password reset from temporary credentials.
-        await signInManager.SignOutAsync();
+        // Refresh the current session cookie with the new security stamp so the
+        // user stays logged in. Other active sessions will be invalidated when
+        // the security stamp validator next runs.
+        await signInManager.RefreshSignInAsync(user);
         return Results.NoContent();
     }
 }
