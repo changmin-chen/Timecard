@@ -52,5 +52,11 @@ export const timecardApi = {
         client.request(`/api/attendance-requests/${id}`, { method: "DELETE" }),
 
     getMonth: (y, m, includeEmpty) =>
-        client.request(`/api/month/${y}/${m}?includeEmpty=${includeEmpty}`)
+        client.request(`/api/month/${y}/${m}?includeEmpty=${includeEmpty}`),
+
+    importCalendarCsv: (file) => {
+        const form = new FormData()
+        form.append('file', file)
+        return client.request('/api/calendar/import/tw-dgpa', { method: 'POST', body: form })
+    },
 };

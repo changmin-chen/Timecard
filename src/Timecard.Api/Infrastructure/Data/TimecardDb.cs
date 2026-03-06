@@ -11,7 +11,6 @@ public sealed class TimecardDb(DbContextOptions<TimecardDb> options) : IdentityD
     public DbSet<PunchEvent> Punches => Set<PunchEvent>();
     public DbSet<AttendanceRequest> AttendanceRequests => Set<AttendanceRequest>();
     public DbSet<CalendarDay> CalendarDays => Set<CalendarDay>();
-    public DbSet<CalendarDayOverride> CalendarDayOverrides => Set<CalendarDayOverride>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -108,16 +107,5 @@ public sealed class TimecardDb(DbContextOptions<TimecardDb> options) : IdentityD
             e.HasIndex(x => x.Date);
         });
 
-        modelBuilder.Entity<CalendarDayOverride>(e =>
-        {
-            e.HasKey(x => new { x.CalendarId, x.Date });
-            e.Property(x => x.CalendarId).HasMaxLength(64);
-            e.Property(x => x.Date).HasColumnType("date");
-            e.Property(x => x.Kind).HasMaxLength(64);
-            e.Property(x => x.Note).HasMaxLength(4000);
-            e.Property(x => x.Source).HasMaxLength(64);
-            e.Property(x => x.UpdatedAt);
-            e.HasIndex(x => x.Date);
-        });
     }
 }
