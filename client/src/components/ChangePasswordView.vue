@@ -10,6 +10,7 @@ const newPassword = ref('')
 const confirmPassword = ref('')
 const errorMsg = ref('')
 const loading = ref(false)
+const success = ref(false)
 
 async function handleSubmit() {
   errorMsg.value = ''
@@ -26,8 +27,10 @@ async function handleSubmit() {
   loading.value = true
   try {
     await timecardApi.changePassword(currentPassword.value, newPassword.value)
-    // Success: clear the mustChangePassword flag so App.vue shows the main app
-    user.value = { ...user.value, mustChangePassword: false }
+    success.value = true
+    setTimeout(() => {
+      user.value = { ...user.value, mustChangePassword: false }
+    }, 1500)
   } catch (err) {
     errorMsg.value = err.message || '密碼變更失敗，請稍後再試。'
   } finally {
@@ -38,60 +41,72 @@ async function handleSubmit() {
 
 <template>
   <div class="cpw-bg">
-    <div class="cpw-card">
-      <div class="cpw-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-        </svg>
+    <Transition name="fade" mode="out-in">
+      <div v-if="success" class="cpw-card" key="success">
+        <div class="cpw-icon success-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 6L9 17l-5-5"/>
+          </svg>
+        </div>
+        <h1 class="cpw-title">密碼已成功變更！</h1>
+        <p class="cpw-sub">正在進入系統…</p>
       </div>
 
-      <h1 class="cpw-title">請設定新密碼</h1>
-      <p class="cpw-sub">這是您第一次登入。請設定一個專屬的個人密碼後再繼續。</p>
-
-      <form class="cpw-form" @submit.prevent="handleSubmit" novalidate>
-        <div class="field">
-          <label for="cpw-current">目前的臨時密碼</label>
-          <input
-            id="cpw-current"
-            v-model="currentPassword"
-            type="password"
-            autocomplete="current-password"
-            placeholder="••••••••"
-            required
-          />
-        </div>
-        <div class="field">
-          <label for="cpw-new">新密碼</label>
-          <input
-            id="cpw-new"
-            v-model="newPassword"
-            type="password"
-            autocomplete="new-password"
-            placeholder="至少 8 個字元"
-            required
-          />
-        </div>
-        <div class="field">
-          <label for="cpw-confirm">確認新密碼</label>
-          <input
-            id="cpw-confirm"
-            v-model="confirmPassword"
-            type="password"
-            autocomplete="new-password"
-            placeholder="再次輸入新密碼"
-            required
-          />
+      <div v-else class="cpw-card" key="form">
+        <div class="cpw-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
         </div>
 
-        <p v-if="errorMsg" class="error-msg" role="alert">{{ errorMsg }}</p>
+        <h1 class="cpw-title">請設定新密碼</h1>
+        <p class="cpw-sub">這是您第一次登入。請設定一個專屬的個人密碼後再繼續。</p>
 
-        <button type="submit" class="submit-btn" :disabled="loading">
-          <span v-if="loading" class="btn-spinner" aria-hidden="true" />
-          {{ loading ? '儲存中…' : '儲存新密碼' }}
-        </button>
-      </form>
-    </div>
+        <form class="cpw-form" @submit.prevent="handleSubmit" novalidate>
+          <div class="field">
+            <label for="cpw-current">目前的臨時密碼</label>
+            <input
+              id="cpw-current"
+              v-model="currentPassword"
+              type="password"
+              autocomplete="current-password"
+              placeholder="輸入您的臨時密碼"
+              required
+            />
+          </div>
+          <div class="field">
+            <label for="cpw-new">新密碼</label>
+            <input
+              id="cpw-new"
+              v-model="newPassword"
+              type="password"
+              autocomplete="new-password"
+              placeholder="至少 8 個字元"
+              required
+            />
+          </div>
+          <div class="field">
+            <label for="cpw-confirm">確認新密碼</label>
+            <input
+              id="cpw-confirm"
+              v-model="confirmPassword"
+              type="password"
+              autocomplete="new-password"
+              placeholder="再次輸入新密碼"
+              required
+            />
+          </div>
+
+          <p v-if="errorMsg" class="error-msg" role="alert">{{ errorMsg }}</p>
+
+          <button type="submit" class="submit-btn" :disabled="loading">
+            <span v-if="loading" class="btn-spinner" aria-hidden="true" />
+            {{ loading ? '儲存中…' : '儲存新密碼' }}
+          </button>
+        </form>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -240,5 +255,20 @@ async function handleSubmit() {
 }
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+.success-icon {
+  background: rgba(22, 163, 74, 0.08);
+  color: #16a34a;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
 }
 </style>
