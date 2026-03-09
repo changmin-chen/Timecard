@@ -364,6 +364,7 @@ tr.future td {
 .cal-badge.punch-ok    { background: rgba(16,185,129,.1);  color: #059669; border: 1px solid rgba(16,185,129,.25);}
 .cal-badge.punch-late  { background: rgba(234,179,8,.1);   color: #a16207; border: 1px solid rgba(234,179,8,.25); }
 .cal-badge.request     { background: rgba(37,99,235,.08);  color: #2563eb; border: 1px solid rgba(37,99,235,.2);  }
+.cal-badge.nonworking  { background: rgba(100,116,139,.08); color: var(--muted); border: 1px solid rgba(100,116,139,.2); }
 .cal-badge.overflow    { background: var(--bg); color: var(--muted); border: 1px solid var(--line); }
 
 /* calendar: non-working day cell */
