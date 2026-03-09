@@ -29,3 +29,15 @@ docker compose up -d --no-deps timecard
 ```
 
 `--no-deps` 會跳過 `postgres`，只重建 `timecard` 容器，資料完全不受影響。
+
+## 直接部屬
+
+```bash
+cd ".\src\Timecard.Api"
+dotnet publish .\Timecard.Api.csproj -c Release -o .\publish
+```
+
+### 環境變數
+
+需要直接設定 `ConnectionStrings__Timecard`, `InitialAdmin__Password`, `SyncPunch__ApiKey`, `ASPNETCORE_ENVIRONMENT`
+
