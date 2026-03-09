@@ -4,6 +4,7 @@ import TodayCard from './TodayCard.vue'
 import MonthReport from './MonthReport.vue'
 import RulesPanel from './RulesPanel.vue'
 import AdminUsersPanel from './AdminUsersPanel.vue'
+import AdminCalendarPanel from './AdminCalendarPanel.vue'
 import AttendanceView from './AttendanceView.vue'
 import ToastContainer from './ToastContainer.vue'
 
@@ -22,6 +23,7 @@ const pages = computed(() => {
   ]
   if (props.user.isAdmin) {
     items.push({ key: 'admin', label: '人員管理', icon: '◧', section: '管理' })
+    items.push({ key: 'calendar-admin', label: '行事曆管理', icon: '◩', section: '管理' })
   }
   return items
 })
@@ -97,6 +99,8 @@ const userInitial = computed(() => {
         <AttendanceView v-if="activePage === 'attendance'" />
 
         <AdminUsersPanel v-if="activePage === 'admin' && user.isAdmin" />
+
+        <AdminCalendarPanel v-if="activePage === 'calendar-admin' && user.isAdmin" />
       </div>
     </div>
 

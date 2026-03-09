@@ -109,19 +109,25 @@ function fmtStartTimeTW(isoStr) {
 }
 
 function getCellBadges(d) {
-    // NonWorkingDay: no badges — cell is dimmed by CSS
-    if (d.isNonWorkingDay) return []
-
+    // Calendar and AttendanceRequests: visible even for future dates
     const all = []
-    if (d.start) {
-        const isLate = startMinutesTW(d.start) > 10 * 60  // AM 10:00
-        all.push({ text: fmtStartTimeTW(d.start), cls: isLate ? 'punch-late' : 'punch-ok' })
-    } else if (!d.attendanceRequests?.length) {
-        all.push({ text: '缺勤', cls: 'absent' })
+    if (d.isNonWorkingDay) {
+        all.push({text: d.note || '非工作日', cls: 'nonworking'})
     }
     for (const r of (d.attendanceRequests || [])) {
-        all.push({ text: categoryLabel(r.category), cls: 'request' })
+        all.push({text: categoryLabel(r.category), cls: 'request'})
     }
+
+    // Future working days: no punch badges
+    if (isFuture(d.date)) return all
+
+    if (d.start) {
+        const isLate = startMinutesTW(d.start) > 10 * 60  // AM 10:00
+        all.push({text: fmtStartTimeTW(d.start), cls: isLate ? 'punch-late' : 'punch-ok'})
+    } else if (!d.isNonWorkingDay && !d.attendanceRequests?.length) {
+        all.push({text: '缺勤', cls: 'absent'})
+    }
+
     return all
 }
 
@@ -135,15 +141,23 @@ const dayMap = computed(() => {
 // inScope=true → day was returned by the API (may or may not have a WorkDay record)
 const calendarCells = computed(() => {
     if (!month.value) return []
-    const { year, month: m } = month.value
+    const {year, month: m} = month.value
     const daysInMonth = new Date(year, m, 0).getDate()
-    return Array.from({ length: daysInMonth }, (_, i) => {
+    return Array.from({length: daysInMonth}, (_, i) => {
         const day = String(i + 1).padStart(2, '0')
         const dateStr = `${year}-${String(m).padStart(2, '0')}-${day}`
         const fromApi = dayMap.value[dateStr]
         return fromApi
-            ? { ...fromApi, inScope: true }
-            : { date: dateStr, inScope: false, exists: false, isNonWorkingDay: false, note: '', start: null, attendanceRequests: [] }
+            ? {...fromApi, inScope: true}
+            : {
+                date: dateStr,
+                inScope: false,
+                exists: false,
+                isNonWorkingDay: false,
+                note: '',
+                start: null,
+                attendanceRequests: []
+            }
     })
 })
 
@@ -218,7 +232,7 @@ function isTodayInProgress(d) {
                 <div class="cal-day-num" :class="{ 'cal-today-num': isToday(d.date) }">
                     {{ Number(d.date.slice(8)) }}
                 </div>
-                <div v-if="d.inScope && !isFuture(d.date)" class="cal-badges">
+                <div v-if="d.inScope && (!isFuture(d.date) || d.isNonWorkingDay)" class="cal-badges">
                     <span
                         v-for="(b, i) in getCellBadges(d).slice(0, 2)"
                         :key="i"
@@ -255,14 +269,23 @@ function isTodayInProgress(d) {
                         <td class="mono">{{ fmtTime(d.end) }}</td>
                         <td class="mono">{{ d.eligibleMinutes ? minsToHMLabeled(d.eligibleMinutes) : '\u2014' }}</td>
                         <!-- 進行中時不套色、顯示佔位符，避免顯示尚未完整計算的彈性/不足數值 -->
-                        <td class="mono" :class="isTodayInProgress(d) ? '' : deltaCls(d.flexDeltaMinutes)">{{ isTodayInProgress(d) ? '\u2014' : fmtMinsHMLabeled(d.flexDeltaMinutes) }}</td>
-                        <td class="mono" :class="isTodayInProgress(d) ? '' : deficitCls(d.deficitMinutes)">{{ isTodayInProgress(d) ? '' : (d.deficitMinutes ? minsToHMLabeled(d.deficitMinutes) : '') }}</td>
+                        <td class="mono" :class="isTodayInProgress(d) ? '' : deltaCls(d.flexDeltaMinutes)">
+                            {{ isTodayInProgress(d) ? '\u2014' : fmtMinsHMLabeled(d.flexDeltaMinutes) }}
+                        </td>
+                        <td class="mono" :class="isTodayInProgress(d) ? '' : deficitCls(d.deficitMinutes)">{{
+                                isTodayInProgress(d) ? '' : (d.deficitMinutes ? minsToHMLabeled(d.deficitMinutes) : '')
+                            }}
+                        </td>
                         <td class="status-cell">
                             <template v-if="d.isNonWorkingDay">
-                                <span class="st-tag st-dim"><span class="sym sym-diamond"></span>{{ d.note || '非工作日' }}</span>
+                                <span class="st-tag st-dim"><span class="sym sym-diamond"></span>{{
+                                        d.note || '非工作日'
+                                    }}</span>
                             </template>
                             <template v-else-if="d.attendanceRequests?.length">
-                                <span v-for="r in d.attendanceRequests" :key="r.category" class="st-tag st-dim st-req"><span class="sym sym-diamond"></span>{{ categoryLabel(r.category) }}</span>
+                                <span v-for="r in d.attendanceRequests" :key="r.category"
+                                      class="st-tag st-dim st-req"><span
+                                    class="sym sym-diamond"></span>{{ categoryLabel(r.category) }}</span>
                             </template>
                             <template v-else-if="isTodayInProgress(d)">
                                 <span class="st-tag st-dim"><span class="sym sym-circle"></span>進行中</span>
@@ -286,11 +309,13 @@ function isTodayInProgress(d) {
 .mnav-wrap {
     margin-bottom: 14px;
 }
+
 .mnav-core {
     display: inline-flex;
     align-items: center;
     gap: 4px;
 }
+
 .nav-arrow {
     width: 28px;
     height: 28px;
@@ -307,21 +332,25 @@ function isTodayInProgress(d) {
     transition: all .15s ease;
     line-height: 1;
 }
+
 .nav-arrow:hover:not(:disabled) {
     background: rgba(37, 99, 235, .08);
     color: var(--primary);
     border-color: rgba(37, 99, 235, .3);
     filter: none;
 }
+
 .nav-arrow:disabled {
     opacity: 0.4;
     cursor: default;
 }
+
 .mnav-trigger {
     position: relative;
     cursor: pointer;
     padding: 0 6px;
 }
+
 .mnav-label {
     font-weight: 700;
     font-size: 18px;
@@ -330,9 +359,11 @@ function isTodayInProgress(d) {
     transition: color .15s ease;
     user-select: none;
 }
+
 .mnav-trigger:hover .mnav-label {
     color: var(--primary);
 }
+
 .hidden-picker {
     position: absolute;
     opacity: 0;

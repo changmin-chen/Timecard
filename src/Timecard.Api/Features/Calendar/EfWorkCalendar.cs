@@ -9,15 +9,11 @@ public sealed class EfWorkCalendar(TimecardDb db) : IWorkCalendar
 {
     public async Task<ResolvedCalendarDay?> GetDayAsync(string calendarId, DateOnly date, CancellationToken ct)
     {
-        var baseDay = await db.CalendarDays
+        var day = await db.CalendarDays
             .AsNoTracking()
             .FirstOrDefaultAsync(d => d.CalendarId == calendarId && d.Date == date, ct);
 
-        var overrideDay = await db.CalendarDayOverrides
-            .AsNoTracking()
-            .FirstOrDefaultAsync(d => d.CalendarId == calendarId && d.Date == date, ct);
-
-        return Resolve(baseDay, overrideDay);
+        return day is null ? null : ToResolved(day);
     }
 
     public async Task<Result<bool>> IsWorkingDayAsync(string calendarId, DateOnly date, CancellationToken ct)
@@ -33,30 +29,10 @@ public sealed class EfWorkCalendar(TimecardDb db) : IWorkCalendar
         DateOnly endExclusive,
         CancellationToken ct)
     {
-        var baseDays = await db.CalendarDays
+        return await db.CalendarDays
             .AsNoTracking()
             .Where(d => d.CalendarId == calendarId && d.Date >= startInclusive && d.Date < endExclusive)
-            .ToDictionaryAsync(d => d.Date, ct);
-
-        var overrideDays = await db.CalendarDayOverrides
-            .AsNoTracking()
-            .Where(d => d.CalendarId == calendarId && d.Date >= startInclusive && d.Date < endExclusive)
-            .ToDictionaryAsync(d => d.Date, ct);
-
-        var allDates = baseDays.Keys.Union(overrideDays.Keys);
-        var resolved = new Dictionary<DateOnly, ResolvedCalendarDay>();
-
-        foreach (var date in allDates)
-        {
-            baseDays.TryGetValue(date, out var baseDay);
-            overrideDays.TryGetValue(date, out var overrideDay);
-
-            var day = Resolve(baseDay, overrideDay);
-            if (day is not null)
-                resolved[date] = day;
-        }
-
-        return resolved;
+            .ToDictionaryAsync(d => d.Date, d => ToResolved(d), ct);
     }
 
     public async Task<Result<ResolvedCalendarDay>> GetRequiredDayAsync(string calendarId, DateOnly date, CancellationToken ct)
@@ -82,33 +58,13 @@ public sealed class EfWorkCalendar(TimecardDb db) : IWorkCalendar
         return Result<IReadOnlyDictionary<DateOnly, ResolvedCalendarDay>>.Ok(days);
     }
 
-    private static ResolvedCalendarDay? Resolve(CalendarDay? baseDay, CalendarDayOverride? overrideDay)
-    {
-        if (baseDay is null && overrideDay is null)
-            return null;
-
-        if (overrideDay is not null)
-        {
-            return new ResolvedCalendarDay(
-                CalendarId: overrideDay.CalendarId,
-                Date: overrideDay.Date,
-                IsWorking: overrideDay.IsWorking,
-                Kind: string.IsNullOrWhiteSpace(overrideDay.Kind) ? baseDay?.Kind ?? "Override" : overrideDay.Kind,
-                Note: string.IsNullOrWhiteSpace(overrideDay.Note) ? baseDay?.Note ?? "" : overrideDay.Note,
-                Source: string.IsNullOrWhiteSpace(overrideDay.Source) ? "ManualOverride" : overrideDay.Source,
-                VersionImportedAt: overrideDay.UpdatedAt
-            );
-        }
-
-        return new ResolvedCalendarDay(
-            CalendarId: baseDay!.CalendarId,
-            Date: baseDay.Date,
-            IsWorking: baseDay.IsWorking,
-            Kind: baseDay.Kind,
-            Note: baseDay.Note,
-            Source: baseDay.Source,
-            VersionImportedAt: baseDay.VersionImportedAt
-        );
-    }
+    private static ResolvedCalendarDay ToResolved(CalendarDay day) => new(
+        CalendarId: day.CalendarId,
+        Date: day.Date,
+        IsWorking: day.IsWorking,
+        Kind: day.Kind,
+        Note: day.Note,
+        Source: day.Source,
+        VersionImportedAt: day.VersionImportedAt
+    );
 }
-
