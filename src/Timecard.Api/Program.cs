@@ -182,6 +182,7 @@ app.UseAuthorization();
 
 app.MapAuthEndpoints();
 app.MapAdminEndpoints();
+app.MapAdminExportEndpoints();
 app.MapPunchEndpoints();
 app.MapDayEndpoints();
 app.MapAttendanceRequestEndpoints();

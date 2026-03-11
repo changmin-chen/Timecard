@@ -3,6 +3,18 @@ import { onMounted, reactive, ref } from 'vue'
 import { timecardApi } from '../timecardApi.js'
 import { useToast } from '../composables/useToast.js'
 
+function currentYearMonth() {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+}
+
+const exportMonthPick = ref(currentYearMonth())
+
+function doExport() {
+  const [year, month] = exportMonthPick.value.split('-')
+  window.location.href = timecardApi.monthExportUrl(year, month)
+}
+
 const toast = useToast()
 
 const users = ref([])
@@ -127,6 +139,15 @@ onMounted(async () => {
           Last reset: {{ lastResetInfo }}
         </p>
       </div>
+
+      <div class="admin-panel">
+        <h3>月報匯出</h3>
+        <p class="hint">匯出所有非管理員帳號的單月出勤明細（CSV，每人每天一列）。</p>
+        <div class="export-row">
+          <input type="month" v-model="exportMonthPick" />
+          <button class="primary" type="button" @click="doExport">匯出 CSV</button>
+        </div>
+      </div>
     </div>
 
     <div v-if="users.length" class="tableWrap">
@@ -179,7 +200,7 @@ onMounted(async () => {
 
 .admin-layout {
   display: grid;
-  grid-template-columns: 1.4fr 1fr;
+  grid-template-columns: 1.4fr 1fr 1fr;
   gap: 12px;
   margin-top: 12px;
 }
@@ -206,6 +227,19 @@ onMounted(async () => {
   border-radius: 10px;
   background: #ffffff;
   overflow-wrap: anywhere;
+}
+
+.export-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.export-row input[type="month"] {
+  flex: 1;
+  min-width: 130px;
 }
 
 .reset-required {
