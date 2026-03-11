@@ -35,60 +35,41 @@ public static class MonthEndpoints
             .Include(d => d.AttendanceRequests)
             .ToListAsync(ct);
 
-        var workDayMap = workDays.ToDictionary(d => d.Date);
-
         var calendarResult = await calendar.GetRequiredDaysAsync(CalendarId, start, endExclusive, ct);
         if (!calendarResult.IsSuccess) return calendarResult.Error!.ToProblem(http);
         var calendarDays = calendarResult.Value!;
 
-        IEnumerable<DateOnly> dates = includeEmpty
-            ? Enumerable.Range(0, endExclusive.DayNumber - start.DayNumber).Select(i => start.AddDays(i))
-            : workDays.Select(d => d.Date);
-
-        var dailySummaries = dates.Select(date => {
-            workDayMap.TryGetValue(date, out var day);
-            bool isWorking = calendarDays[date].IsWorking;
-            var facts = day is not null
-                ? DailySettlementFacts.FromWorkday(day, isWorking)
-                : DailySettlementFacts.FromAbsence(date, isWorking);
-            return FlexTimePolicy.ComputeDay(facts);
-        });
-
-        var monthReport = FlexTimePolicy.ComputeMonth(dailySummaries);
+        var computedDays = MonthReportBuilder.Build(workDays, calendarDays, start, endExclusive);
+        var monthReport = FlexTimePolicy.ComputeMonth(computedDays.Select(d => d.Summary));
 
         var today = TaiwanTime.ToDate(clock.UtcNow);
         var settlementCutoff = today.AddDays(-1); // 截至昨日，避免今日進行中工作日顯示假赤字
         var settledFlexBank = monthReport.Days.FlexBalanceMinutes(settlementCutoff);
         var settledDeficit  = monthReport.Days.DeficitBalanceMinutes(settlementCutoff);
 
-        var dtoDays = monthReport.Days.Select(d => {
-            workDayMap.TryGetValue(d.Date, out WorkDay? src);
-            ResolvedCalendarDay calendarDay = calendarDays[d.Date];
-            var (punchStart, punchEnd) = src?.GetPunchTimestamps() ?? (null, null);
+        IEnumerable<ComputedDay> dtoSource = includeEmpty
+            ? computedDays
+            : computedDays.Where(d => d.Source is not null);
 
-            return new MonthDayDto(
-            Date: d.Date,
-            Exists: src is not null,
-            IsNonWorkingDay: !calendarDay.IsWorking,
-            Note: calendarDay.Note,
-            CalendarKind: calendarDay.Kind,
-            Start: punchStart,
-            End: punchEnd,
-            PunchCount: src?.Punches.Count ?? 0,
-            PlannedMinutes: d.PlannedMinutes,
-            PunchedMinutes: d.PunchedMinutes,
-            EligibleMinutes: d.EligibleMinutes,
-            EligibleDeltaMinutes: d.EligibleDeltaMinutes,
-            FlexDeltaMinutes: d.FlexDeltaMinutes,
-            DeficitMinutes: d.DeficitMinutes,
-            AttendanceRequests: src?.AttendanceRequests
-                .Select(r => new MonthDayAttendanceDto(r.Category,
-                    r.Range.Start,
-                    r.Range.End,
-                    r.Note))
+        var dtoDays = dtoSource.Select(d => new MonthDayDto(
+            Date: d.Summary.Date,
+            Exists: d.Source is not null,
+            IsNonWorkingDay: !d.CalendarDay.IsWorking,
+            Note: d.CalendarDay.Note,
+            CalendarKind: d.CalendarDay.Kind,
+            Start: d.PunchStart,
+            End: d.PunchEnd,
+            PunchCount: d.Source?.Punches.Count ?? 0,
+            PlannedMinutes: d.Summary.PlannedMinutes,
+            PunchedMinutes: d.Summary.PunchedMinutes,
+            EligibleMinutes: d.Summary.EligibleMinutes,
+            EligibleDeltaMinutes: d.Summary.EligibleDeltaMinutes,
+            FlexDeltaMinutes: d.Summary.FlexDeltaMinutes,
+            DeficitMinutes: d.Summary.DeficitMinutes,
+            AttendanceRequests: d.Source?.AttendanceRequests
+                .Select(r => new MonthDayAttendanceDto(r.Category, r.Range.Start, r.Range.End, r.Note))
                 .ToList() ?? []
-            );
-        }).ToList();
+        )).ToList();
 
         return Results.Ok(new MonthResponse(Year: year, Month: month, AsOf: today, SettledFlexBankMinutes: settledFlexBank, SettledDeficitMinutes: settledDeficit, Days: dtoDays));
     }

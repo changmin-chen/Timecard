@@ -59,4 +59,6 @@ export const timecardApi = {
         form.append('file', file)
         return client.request('/api/calendar/import/tw-dgpa', { method: 'POST', body: form })
     },
+
+    monthExportUrl: (year, month) => `/api/admin/export/month/${year}/${month}`,
 };
