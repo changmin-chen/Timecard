@@ -35,6 +35,21 @@
 | TodayCard daily stats | `N 分` | `520 / 540 分` |
 
 
+## Domain Design: Factory Methods on Records
+
+**Context**: Questioned whether `DailySettlementFacts` having `FromWorkday` / `FromAbsence` factory methods violated single responsibility ("data container + construction logic = two responsibilities").
+
+**Rule**: Factory methods on a record are not automatically a smell. The key question is whether the construction knowledge *belongs* to the type. If the factory only depends on domain-pure inputs (sibling aggregates, constants, policy), it's reasonable cohesion — the type owns the answer to "how do I come into existence?"
+
+The smell shows up when the type pulls in **infrastructure** (DB, HTTP, serialization) or when the construction logic is complex enough to warrant its own service. Neither applies here.
+
+**Corollary**: Moving such factory methods to an external class (e.g. `FlexTimePolicy`) can actually hurt clarity if that class already has a distinct role ("apply rules to produce results"), because then it also takes on "construct the input facts" — a less obvious responsibility.
+
+**Wrong instinct**: "data container + construction logic = split them"
+**Better instinct**: ask "does the construction logic belong here semantically, and are the dependencies domain-pure?"
+
+---
+
 ## Frontend: Consistent Icon/Symbol Sizing
 
 **Session**: revise/client-uiux-improval — MonthReport status column

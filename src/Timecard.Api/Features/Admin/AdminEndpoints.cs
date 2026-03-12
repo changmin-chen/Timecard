@@ -2,10 +2,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Domain.Entities;
 using Timecard.Api.Domain.Results;
+using Timecard.Api.Features.Auth;
 using Timecard.Api.Features.Shared;
 using Timecard.Api.Infrastructure.Data;
 
-namespace Timecard.Api.Features.Auth;
+namespace Timecard.Api.Features.Admin;
 
 public static class AdminEndpoints
 {
@@ -75,22 +76,26 @@ public static class AdminEndpoints
     private static async Task<IResult> CreateUser(
         CreateUserRequest body,
         HttpContext http,
-        UserManager<AppUser> userManager)
+        TimecardDb db,
+        UserManager<AppUser> userManager,
+        CancellationToken ct)
     {
-        var exists = await userManager.FindByEmailAsync(body.Email);
-        if (exists is not null)
-            return new Error("admin.email_taken", "This email is already taken.", ErrorKind.Conflict, "Conflict").ToProblem(http);
+        var normalizedEmail = userManager.NormalizeEmail(body.Email);
+        var exists = await db.Users.AnyAsync(u => u.NormalizedEmail == normalizedEmail, ct);
+        if (exists)
+            return Errors.Admin.EmailTaken.ToProblem(http);
 
         var user = new AppUser(body.Email, body.EmployeeId, body.DisplayName)
         {
             MustChangePassword = true,
         };
 
+        ct.ThrowIfCancellationRequested();
         var result = await userManager.CreateAsync(user, body.TemporaryPassword);
         if (!result.Succeeded)
         {
             var message = string.Join(" ", result.Errors.Select(e => e.Description));
-            return new Error("admin.create_user_failed", message, ErrorKind.Validation, "Invalid request").ToProblem(http);
+            return Errors.Admin.CreateUserFailed(message).ToProblem(http);
         }
 
         return Results.Created($"/api/admin/users/{user.Id}", new
@@ -107,33 +112,26 @@ public static class AdminEndpoints
         string id,
         HttpContext http,
         IConfiguration config,
-        UserManager<AppUser> userManager)
+        TimecardDb db,
+        UserManager<AppUser> userManager,
+        CancellationToken ct)
     {
-        var user = await userManager.FindByIdAsync(id);
+        var user = await db.Users.SingleOrDefaultAsync(u => u.Id == id, ct);
         if (user is null)
-            return new Error("admin.user_not_found", "User not found.", ErrorKind.NotFound, "Not found").ToProblem(http);
+            return Errors.Admin.UserNotFound.ToProblem(http);
 
         var defaultResetPassword = config["Admin:DefaultResetPassword"];
         if (string.IsNullOrWhiteSpace(defaultResetPassword))
             defaultResetPassword = BuiltInDefaultResetPassword;
 
         if (defaultResetPassword.Length < 8)
-            return new Error(
-                "admin.default_password_invalid",
-                "Admin:DefaultResetPassword must be at least 8 characters.",
-                ErrorKind.Unexpected,
-                "Server configuration error").ToProblem(http);
+            return Errors.Admin.DefaultPasswordInvalid.ToProblem(http);
 
         user.PasswordHash = userManager.PasswordHasher.HashPassword(user, defaultResetPassword);
         user.SecurityStamp = Guid.NewGuid().ToString("N");
         user.MustChangePassword = true;
 
-        var updated = await userManager.UpdateAsync(user);
-        if (!updated.Succeeded)
-        {
-            var message = string.Join(" ", updated.Errors.Select(e => e.Description));
-            return new Error("admin.reset_password_failed", message, ErrorKind.Validation, "Invalid request").ToProblem(http);
-        }
+        await db.SaveChangesAsync(ct);
 
         return Results.Ok(new
         {
@@ -152,16 +150,13 @@ internal sealed class CreateUserValidationFilter : IEndpointFilter
         var req = ctx.GetArgument<AdminEndpoints.CreateUserRequest>(0);
 
         if (string.IsNullOrWhiteSpace(req.Email))
-            return new Error("admin.invalid_email", "Email is required.",
-            ErrorKind.Validation, "Invalid request").ToProblem(ctx.HttpContext);
+            return Errors.Admin.InvalidEmail.ToProblem(ctx.HttpContext);
 
         if (string.IsNullOrWhiteSpace(req.EmployeeId))
-            return new Error("admin.invalid_employee_id", "EmployeeId is required.",
-            ErrorKind.Validation, "Invalid request").ToProblem(ctx.HttpContext);
+            return Errors.Admin.InvalidEmployeeId.ToProblem(ctx.HttpContext);
 
         if (string.IsNullOrEmpty(req.TemporaryPassword) || req.TemporaryPassword.Length < 8)
-            return new Error("admin.password_too_short", "Password must be at least 8 characters.",
-            ErrorKind.Validation, "Invalid request").ToProblem(ctx.HttpContext);
+            return Errors.Admin.PasswordTooShort.ToProblem(ctx.HttpContext);
 
         return await next(ctx);
     }

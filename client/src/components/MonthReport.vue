@@ -256,7 +256,7 @@ function isTodayInProgress(d) {
                         <th>日期</th>
                         <th>上班</th>
                         <th>下班</th>
-                        <th>工時</th>
+                        <th>有效工時</th>
                         <th>彈性</th>
                         <th>不足</th>
                         <th>狀態</th>
@@ -267,7 +267,10 @@ function isTodayInProgress(d) {
                         <td class="mono">{{ fmtDateShort(d.date) }}</td>
                         <td class="mono">{{ fmtTime(d.start) }}</td>
                         <td class="mono">{{ fmtTime(d.end) }}</td>
-                        <td class="mono">{{ d.eligibleMinutes ? minsToHMLabeled(d.eligibleMinutes) : '\u2014' }}</td>
+                        <td class="mono">
+                            {{ d.eligibleMinutes ? minsToHMLabeled(d.eligibleMinutes) : '\u2014' }}
+                            <span v-if="d.punchedMinutes !== d.eligibleMinutes" class="punched-sub">打卡 {{ d.punchedMinutes ? minsToHMLabeled(d.punchedMinutes) : '\u2014' }}</span>
+                        </td>
                         <!-- 進行中時不套色、顯示佔位符，避免顯示尚未完整計算的彈性/不足數值 -->
                         <td class="mono" :class="isTodayInProgress(d) ? '' : deltaCls(d.flexDeltaMinutes)">
                             {{ isTodayInProgress(d) ? '\u2014' : fmtMinsHMLabeled(d.flexDeltaMinutes) }}
@@ -306,6 +309,13 @@ function isTodayInProgress(d) {
 </template>
 
 <style scoped>
+.punched-sub {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+}
+
 .mnav-wrap {
     margin-bottom: 14px;
 }
