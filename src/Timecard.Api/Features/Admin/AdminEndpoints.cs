@@ -2,10 +2,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Domain.Entities;
 using Timecard.Api.Domain.Results;
+using Timecard.Api.Features.Auth;
 using Timecard.Api.Features.Shared;
 using Timecard.Api.Infrastructure.Data;
 
-namespace Timecard.Api.Features.Auth;
+namespace Timecard.Api.Features.Admin;
 
 public static class AdminEndpoints
 {
@@ -75,10 +76,13 @@ public static class AdminEndpoints
     private static async Task<IResult> CreateUser(
         CreateUserRequest body,
         HttpContext http,
-        UserManager<AppUser> userManager)
+        TimecardDb db,
+        UserManager<AppUser> userManager,
+        CancellationToken ct)
     {
-        var exists = await userManager.FindByEmailAsync(body.Email);
-        if (exists is not null)
+        var normalizedEmail = userManager.NormalizeEmail(body.Email);
+        var exists = await db.Users.AnyAsync(u => u.NormalizedEmail == normalizedEmail, ct);
+        if (exists)
             return new Error("admin.email_taken", "This email is already taken.", ErrorKind.Conflict, "Conflict").ToProblem(http);
 
         var user = new AppUser(body.Email, body.EmployeeId, body.DisplayName)
@@ -86,6 +90,7 @@ public static class AdminEndpoints
             MustChangePassword = true,
         };
 
+        ct.ThrowIfCancellationRequested();
         var result = await userManager.CreateAsync(user, body.TemporaryPassword);
         if (!result.Succeeded)
         {
@@ -107,9 +112,11 @@ public static class AdminEndpoints
         string id,
         HttpContext http,
         IConfiguration config,
-        UserManager<AppUser> userManager)
+        TimecardDb db,
+        UserManager<AppUser> userManager,
+        CancellationToken ct)
     {
-        var user = await userManager.FindByIdAsync(id);
+        var user = await db.Users.SingleOrDefaultAsync(u => u.Id == id, ct);
         if (user is null)
             return new Error("admin.user_not_found", "User not found.", ErrorKind.NotFound, "Not found").ToProblem(http);
 
@@ -128,12 +135,7 @@ public static class AdminEndpoints
         user.SecurityStamp = Guid.NewGuid().ToString("N");
         user.MustChangePassword = true;
 
-        var updated = await userManager.UpdateAsync(user);
-        if (!updated.Succeeded)
-        {
-            var message = string.Join(" ", updated.Errors.Select(e => e.Description));
-            return new Error("admin.reset_password_failed", message, ErrorKind.Validation, "Invalid request").ToProblem(http);
-        }
+        await db.SaveChangesAsync(ct);
 
         return Results.Ok(new
         {

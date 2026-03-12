@@ -7,6 +7,7 @@ using Serilog;
 using Serilog.Events;
 using Timecard.Api.Domain.Entities;
 using Timecard.Api.Features.AttendanceRequests;
+using Timecard.Api.Features.Admin;
 using Timecard.Api.Features.Auth;
 using Timecard.Api.Features.Calendar;
 using Timecard.Api.Features.Days;
