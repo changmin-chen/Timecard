@@ -85,8 +85,11 @@ public static class AdminExportEndpoints
         csv.WriteField("星期");
         csv.WriteField("上班");
         csv.WriteField("下班");
+        csv.WriteField("打卡工時(分)");
         csv.WriteField("有效工時(分)");
         csv.WriteField("不足(分)");
+        csv.WriteField("申請時段");
+        csv.WriteField("事由");
         csv.WriteField("備註");
         await csv.NextRecordAsync();
 
@@ -99,14 +102,19 @@ public static class AdminExportEndpoints
             foreach (var day in computedDays)
             {
                 var date = day.Summary.Date;
+                var requests = day.Source?.AttendanceRequests ?? [];
+                
                 csv.WriteField(displayName);
                 csv.WriteField(year);
                 csv.WriteField(date.ToString("MM/dd"));
                 csv.WriteField(ChineseWeekdays[(int)date.DayOfWeek]);
                 csv.WriteField(day.PunchStart is not null ? TaiwanTime.ToTime(day.PunchStart.Value).ToString("HH:mm") : "");
                 csv.WriteField(day.PunchEnd is not null ? TaiwanTime.ToTime(day.PunchEnd.Value).ToString("HH:mm") : "");
+                csv.WriteField(day.Summary.PunchedMinutes);
                 csv.WriteField(day.Summary.EligibleMinutes);
                 csv.WriteField(day.Summary.DeficitMinutes);
+                csv.WriteField(string.Join(" / ", requests.Select(r => r.Range.ToString())));
+                csv.WriteField(string.Join(" / ", requests.Select(r => r.Note)));
                 csv.WriteField(day.CalendarDay.Note);
                 await csv.NextRecordAsync();
             }
