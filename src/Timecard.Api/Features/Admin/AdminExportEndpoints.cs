@@ -4,12 +4,13 @@ using CsvHelper;
 using Microsoft.EntityFrameworkCore;
 using Timecard.Api.Domain;
 using Timecard.Api.Domain.Entities.WorkDayAggregate;
+using Timecard.Api.Features.Auth;
 using Timecard.Api.Features.Calendar;
 using Timecard.Api.Features.Month;
 using Timecard.Api.Features.Shared;
 using Timecard.Api.Infrastructure.Data;
 
-namespace Timecard.Api.Features.Auth;
+namespace Timecard.Api.Features.Admin;
 
 public static class AdminExportEndpoints
 {

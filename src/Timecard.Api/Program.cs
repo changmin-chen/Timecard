@@ -7,6 +7,7 @@ using Serilog;
 using Serilog.Events;
 using Timecard.Api.Domain.Entities;
 using Timecard.Api.Features.AttendanceRequests;
+using Timecard.Api.Features.Admin;
 using Timecard.Api.Features.Auth;
 using Timecard.Api.Features.Calendar;
 using Timecard.Api.Features.Days;
@@ -31,7 +32,9 @@ builder.Services.ConfigureHttpJsonOptions(o => {
 builder.Services.AddDbContext<TimecardDb>(opt => {
     var cs = builder.Configuration.GetConnectionString("Timecard")
              ?? throw new InvalidOperationException("ConnectionStrings:Timecard is missing.");
-    opt.UseNpgsql(cs);
+    opt.UseNpgsql(cs, npgsql => {
+        npgsql.CommandTimeout(15); 
+    });
 });
 
 // --- Authentication & Authorization ---
