@@ -13,12 +13,12 @@ const props = defineProps({
 })
 const emit = defineEmits(['logout'])
 
-const activePage = ref('daily')
+const activePage = ref('monthly')
 
 const pages = computed(() => {
   const items = [
-    { key: 'daily',      label: '日報表',  icon: '◉', section: '主選單' },
     { key: 'monthly',    label: '月報表',  icon: '◫', section: '主選單' },
+    { key: 'daily',      label: '日報表',  icon: '◉', section: '主選單' },
     { key: 'attendance', label: '出勤管理', icon: '◪', section: '管理' },
   ]
   if (props.user.isAdmin) {
