@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
+const helpOpen = ref(false)
 import TodayCard from './TodayCard.vue'
 import MonthReport from './MonthReport.vue'
 import RulesPanel from './RulesPanel.vue'
@@ -86,13 +87,11 @@ const userInitial = computed(() => {
     <div class="app-main">
       <div class="app-topbar">
         <span class="app-topbar-title">{{ pageTitle }}</span>
+        <button class="topbar-help-btn" @click="helpOpen = true" title="計算規則說明">◈</button>
       </div>
 
       <div class="page-content">
-        <template v-if="activePage === 'daily'">
-          <TodayCard />
-          <RulesPanel />
-        </template>
+        <TodayCard v-if="activePage === 'daily'" />
 
         <MonthReport v-show="activePage === 'monthly'" />
 
@@ -103,6 +102,21 @@ const userInitial = computed(() => {
         <AdminCalendarPanel v-if="activePage === 'calendar-admin' && user.isAdmin" />
       </div>
     </div>
+
+    <!-- Help modal -->
+    <Transition name="help-fade">
+      <div v-if="helpOpen" class="help-modal-overlay" @click.self="helpOpen = false">
+        <div class="help-modal">
+          <div class="help-modal-header">
+            <span class="help-modal-title">◈ 計算規則說明</span>
+            <button class="help-modal-close" @click="helpOpen = false">✕</button>
+          </div>
+          <div class="help-modal-body">
+            <RulesPanel :modal-mode="true" />
+          </div>
+        </div>
+      </div>
+    </Transition>
 
     <ToastContainer />
   </div>
@@ -272,6 +286,7 @@ const userInitial = computed(() => {
   height: 52px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   z-index: 50;
 }
 .app-topbar-title {
@@ -280,11 +295,105 @@ const userInitial = computed(() => {
   color: var(--text);
   letter-spacing: -0.01em;
 }
+.topbar-help-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.topbar-help-btn:hover {
+  background: rgba(37, 99, 235, 0.06);
+  color: var(--primary);
+  border-color: rgba(37, 99, 235, 0.3);
+  filter: none;
+}
 
 .page-content {
   max-width: 1100px;
   margin: 0 auto;
   padding: 20px 28px 40px;
   width: 100%;
+}
+
+/* ── Help modal ── */
+.help-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.38);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+}
+.help-modal {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 640px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+.help-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.help-modal-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.01em;
+}
+.help-modal-close {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.help-modal-close:hover {
+  color: var(--danger);
+  border-color: rgba(220, 38, 38, 0.35);
+  background: rgba(220, 38, 38, 0.06);
+  filter: none;
+}
+.help-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* Transition */
+.help-fade-enter-active,
+.help-fade-leave-active {
+  transition: opacity 0.18s ease;
+}
+.help-fade-enter-from,
+.help-fade-leave-to {
+  opacity: 0;
 }
 </style>
