@@ -63,6 +63,16 @@ public class FlexTimePolicyTests
         Assert.Equal(0, d.FlexDeltaMinutes);
         Assert.Equal(0, d.DeficitMinutes);
     }
+
+    [Fact]
+    public void Workday_Absence_ZeroFlexAndFullDeficit()
+    {
+        // 整天缺勤：不動彈性，全部計為不足
+        var planned = FlexTimePolicy.PlannedMinutesPerWorkDay;
+        var d = FlexTimePolicy.ComputeDay(Facts(planned, punch: 0, eligible: 0));
+        Assert.Equal(0, d.FlexDeltaMinutes);
+        Assert.Equal(planned, d.DeficitMinutes);
+    }
     
 
     [Fact]
