@@ -20,14 +20,16 @@ public static class FlexTimePolicy
     public static DailyWorkSummary ComputeDay(DailySettlementFacts facts)
     {
         int eligibleDelta = facts.EligibleMinutes - facts.PlannedMinutes;
-
-        // 免上班日：不累積也不使用彈性（避免「放假還賺彈性」）
-        // 上班日：±55 分鐘上限（累積與單日消耗皆受限，避免暴衝或一次大量提領）
-        bool isWorkingDay = facts.PlannedMinutes != 0;
-        int flexDelta = isWorkingDay ? Math.Clamp(eligibleDelta, -DailyFlexCapMinutes, DailyFlexCapMinutes) : 0;
-
-        // 彈性時數不夠扣的不足時數
-        int deficit = Math.Max(0, -(eligibleDelta - flexDelta));
+        
+        bool isNonWorkingDay = facts.PlannedMinutes == 0;
+        bool isAbsence = facts.PunchMinutes == 0 && !isNonWorkingDay;
+        
+        // 1) 免上班日: 不累積也不使用彈性
+        // 2) 上班日: 彈性 ±55 分鐘上限
+        // 3) 整天缺勤: 不動彈性，全部計為不足
+        int flexDelta = (isNonWorkingDay || isAbsence) ? 0 : Math.Clamp(eligibleDelta, -DailyFlexCapMinutes, DailyFlexCapMinutes) ;
+        int deficit = Math.Max(0, flexDelta - eligibleDelta);  // 不足時數 = 彈性時數不夠扣的
+        
         return new DailyWorkSummary(facts.Date, facts.PlannedMinutes, facts.PunchMinutes, facts.EligibleMinutes, FlexDeltaMinutes: flexDelta, DeficitMinutes: deficit);
     }
 

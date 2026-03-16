@@ -20,7 +20,8 @@ public static class MonthEndpoints
         return app;
     }
 
-    private static async Task<IResult> GetMonth(TimecardDb db, IWorkCalendar calendar, ICurrentUser currentUser, IClock clock, HttpContext http, int year, int month, bool includeEmpty, CancellationToken ct)
+    private static async Task<IResult> GetMonth(TimecardDb db, IWorkCalendar calendar, ICurrentUser currentUser,
+        IClock clock, HttpContext http, int year, int month, bool includeEmpty, CancellationToken ct)
     {
         if (year is < 2000 or > 2100) return Results.BadRequest(new { error = "year out of range." });
         if (month is < 1 or > 12) return Results.BadRequest(new { error = "month out of range." });
@@ -45,32 +46,35 @@ public static class MonthEndpoints
         var today = TaiwanTime.ToDate(clock.UtcNow);
         var settlementCutoff = today.AddDays(-1); // 截至昨日，避免今日進行中工作日顯示假赤字
         var settledFlexBank = monthReport.Days.FlexBalanceMinutes(settlementCutoff);
-        var settledDeficit  = monthReport.Days.DeficitBalanceMinutes(settlementCutoff);
+        var settledDeficit = monthReport.Days.DeficitBalanceMinutes(settlementCutoff);
 
         IEnumerable<ComputedDay> dtoSource = includeEmpty
             ? computedDays
             : computedDays.Where(d => d.Source is not null);
 
         var dtoDays = dtoSource.Select(d => new MonthDayDto(
-            Date: d.Summary.Date,
-            Exists: d.Source is not null,
-            IsNonWorkingDay: !d.CalendarDay.IsWorking,
-            Note: d.CalendarDay.Note,
-            CalendarKind: d.CalendarDay.Kind,
-            Start: d.PunchStart,
-            End: d.PunchEnd,
-            PunchCount: d.Source?.Punches.Count ?? 0,
-            PlannedMinutes: d.Summary.PlannedMinutes,
-            PunchedMinutes: d.Summary.PunchedMinutes,
-            EligibleMinutes: d.Summary.EligibleMinutes,
-            EligibleDeltaMinutes: d.Summary.EligibleDeltaMinutes,
-            FlexDeltaMinutes: d.Summary.FlexDeltaMinutes,
-            DeficitMinutes: d.Summary.DeficitMinutes,
-            AttendanceRequests: d.Source?.AttendanceRequests
-                .Select(r => new MonthDayAttendanceDto(r.Category, r.Range.Start, r.Range.End, r.Note))
-                .ToList() ?? []
-        )).ToList();
+                Date: d.Summary.Date,
+                Exists: d.Source is not null,
+                IsNonWorkingDay: !d.CalendarDay.IsWorking,
+                Note: d.CalendarDay.Note,
+                CalendarKind: d.CalendarDay.Kind,
+                Start: d.PunchStart,
+                End: d.PunchEnd,
+                PunchCount: d.Source?.Punches.Count ?? 0,
+                PlannedMinutes: d.Summary.PlannedMinutes,
+                PunchedMinutes: d.Summary.PunchedMinutes,
+                EligibleMinutes: d.Summary.EligibleMinutes,
+                EligibleDeltaMinutes: d.Summary.EligibleDeltaMinutes,
+                FlexDeltaMinutes: d.Summary.FlexDeltaMinutes,
+                DeficitMinutes: d.Summary.DeficitMinutes,
+                AttendanceRequests: d.Source?.AttendanceRequests
+                    .Select(r => new MonthDayAttendanceDto(r.Category, r.Range.Start, r.Range.End, r.Note))
+                    .ToList() ?? []
+            ))
+            .OrderByDescending(d => d.Date)
+            .ToList();
 
-        return Results.Ok(new MonthResponse(Year: year, Month: month, AsOf: today, SettledFlexBankMinutes: settledFlexBank, SettledDeficitMinutes: settledDeficit, Days: dtoDays));
+        return Results.Ok(new MonthResponse(Year: year, Month: month, AsOf: today,
+            SettledFlexBankMinutes: settledFlexBank, SettledDeficitMinutes: settledDeficit, Days: dtoDays));
     }
 }
