@@ -87,6 +87,7 @@ public static class AdminExportEndpoints
         csv.WriteField("下班");
         csv.WriteField("打卡工時(分)");
         csv.WriteField("有效工時(分)");
+        csv.WriteField("彈性(分)");
         csv.WriteField("不足(分)");
         csv.WriteField("申請時段");
         csv.WriteField("事由");
@@ -112,6 +113,7 @@ public static class AdminExportEndpoints
                 csv.WriteField(day.PunchEnd is not null ? TaiwanTime.ToTime(day.PunchEnd.Value).ToString("HH:mm") : "");
                 csv.WriteField(day.Summary.PunchedMinutes);
                 csv.WriteField(day.Summary.EligibleMinutes);
+                csv.WriteField(day.Summary.FlexDeltaMinutes);
                 csv.WriteField(day.Summary.DeficitMinutes);
                 csv.WriteField(string.Join(" / ", requests.Select(r => r.Range.ToString())));
                 csv.WriteField(string.Join(" / ", requests.Select(r => r.Note)));
