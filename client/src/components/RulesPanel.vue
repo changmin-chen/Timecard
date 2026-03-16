@@ -1,11 +1,12 @@
 <script setup>
 import { ref } from 'vue'
+const props = defineProps({ modalMode: { type: Boolean, default: false } })
 const open = ref(false)
 </script>
 
 <template>
   <div class="rules-wrap">
-    <button class="rules-trigger" @click="open = !open">
+    <button v-if="!props.modalMode" class="rules-trigger" @click="open = !open">
       <span class="rt-left">
         <span class="rt-icon">◈</span>
         <span class="rt-label">計算規則說明</span>
@@ -14,7 +15,7 @@ const open = ref(false)
     </button>
 
     <Transition name="rules-expand">
-      <div v-if="open" class="rules-body">
+      <div v-if="props.modalMode || open" class="rules-body" :class="{ 'rules-body-modal': props.modalMode }">
         <div class="rule-section">
           <div class="rs-heading">工時計算基礎</div>
           <ul class="rs-list">
@@ -54,7 +55,6 @@ const open = ref(false)
 
 <style scoped>
 .rules-wrap {
-  margin-top: 12px;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -111,6 +111,10 @@ const open = ref(false)
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px 24px;
   border-top: 1px solid var(--line);
+}
+.rules-body-modal {
+  border-top: none;
+  padding: 0;
 }
 
 .rs-heading {

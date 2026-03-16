@@ -88,107 +88,105 @@ function punchKind(idx, total) {
     </div>
   </div>
 
-  <!-- ── Working day: 2-column layout ── -->
-  <div v-else class="day-layout">
+  <!-- ── Working day: single unified card ── -->
+  <div v-else class="today-card">
 
-    <!-- LEFT: Work summary -->
-    <div class="work-card">
-      <template v-if="day">
-        <!-- Times hero: IN — progress — OUT -->
-        <div class="times-hero">
-          <div class="time-col">
-            <div class="tc-eyebrow">上班</div>
-            <div class="tc-time" :class="isLate ? 'time-late' : day.start ? 'time-ok' : 'time-empty'">
-              {{ fmtTime(day.start) }}
-            </div>
-            <div class="tc-note" :class="{ 'note-late': isLate }">
-              {{ isLate ? '遲到' : day.start ? '準時' : '待打卡' }}
-            </div>
+    <template v-if="day">
+      <!-- Hero: IN — progress — OUT -->
+      <div class="tc-hero">
+        <div class="time-col">
+          <div class="tc-eyebrow">上班</div>
+          <div class="tc-time" :class="isLate ? 'time-late' : day.start ? 'time-ok' : 'time-empty'">
+            {{ fmtTime(day.start) }}
           </div>
-
-          <div class="progress-col">
-            <div class="pbar-track">
-              <div class="pbar-fill" :style="{ width: workProgressPct + '%' }"></div>
-            </div>
-            <div class="pbar-legend">
-              <span class="pbl-actual">{{ workDisplay }}</span>
-              <span class="pbl-divider">/</span>
-              <span class="pbl-planned">{{ plannedDisplay }}</span>
-              <span class="pbl-pct">{{ workProgressPct }}%</span>
-            </div>
-          </div>
-
-          <div class="time-col time-col-right">
-            <div class="tc-eyebrow">下班</div>
-            <div class="tc-time" :class="day.end ? '' : 'time-empty'">
-              {{ fmtTime(day.end) }}
-            </div>
-            <div class="tc-note">{{ day.end ? '' : '未下班' }}</div>
+          <div class="tc-note" :class="{ 'note-late': isLate }">
+            {{ isLate ? '遲到' : day.start ? '準時' : '待打卡' }}
           </div>
         </div>
 
-        <!-- Stats tiles -->
-        <div class="stats-strip">
-          <div class="stat-tile" :class="deltaSign">
-            <div class="st-label">工時差額</div>
-            <div class="st-val">
-              {{ fmtMins(day.eligibleDeltaMinutes) }}<span class="st-unit">分</span>
+        <div class="progress-col">
+          <div class="pbar-track">
+            <div class="pbar-fill" :style="{ width: workProgressPct + '%' }"></div>
+          </div>
+          <div class="pbar-legend">
+            <span class="pbl-actual">{{ workDisplay }}</span>
+            <span class="pbl-divider">/</span>
+            <span class="pbl-planned">{{ plannedDisplay }}</span>
+            <span class="pbl-pct">{{ workProgressPct }}%</span>
+          </div>
+        </div>
+
+        <div class="time-col time-col-right">
+          <div class="tc-eyebrow">下班</div>
+          <div class="tc-time" :class="day.end ? '' : 'time-empty'">
+            {{ fmtTime(day.end) }}
+          </div>
+          <div class="tc-note">{{ day.end ? '' : '未下班' }}</div>
+        </div>
+      </div>
+
+      <!-- Stats tiles -->
+      <div class="tc-stats">
+        <div class="stat-tile" :class="deltaSign">
+          <div class="st-label">工時差額</div>
+          <div class="st-val">
+            {{ fmtMins(day.eligibleDeltaMinutes) }}<span class="st-unit">分</span>
+          </div>
+        </div>
+        <div class="stat-tile" :class="flexSign">
+          <div class="st-label">今日彈性</div>
+          <div class="st-val">
+            {{ fmtMins(day.flexDeltaMinutes) }}<span class="st-unit">分</span>
+          </div>
+        </div>
+        <div class="stat-tile neutral">
+          <div class="st-label">實際工時</div>
+          <div class="st-val st-val-mono">{{ workDisplay }}</div>
+        </div>
+      </div>
+
+      <p v-if="day.note" class="day-note">{{ day.note }}</p>
+
+      <!-- Punch section -->
+      <div class="tc-punches">
+        <div class="tc-punches-head">
+          <span class="pc-title">打卡紀錄</span>
+          <span class="pc-badge">外部同步</span>
+        </div>
+
+        <div v-if="!day?.punches?.length" class="pc-empty">
+          <div class="pce-ring">○</div>
+          <div class="pce-msg">{{ loading ? '載入中…' : '尚無打卡紀錄' }}</div>
+          <div v-if="!loading && day" class="pce-sub">等待外部系統同步</div>
+        </div>
+
+        <div v-else class="punch-timeline">
+          <div v-for="(p, i) in day.punches" :key="p.id" class="pt-row">
+            <div class="pt-track">
+              <div class="pt-dot" :class="`dot-${punchKind(i, day.punches.length)}`"></div>
+              <div v-if="i < day.punches.length - 1" class="pt-line"></div>
+            </div>
+            <div class="pt-body">
+              <span class="pt-time">{{ fmtTime(p.at) }}</span>
+              <span class="pt-tag" :class="`ptag-${punchKind(i, day.punches.length)}`">
+                {{ punchLabel(i, day.punches.length) }}
+              </span>
+              <span v-if="p.note" class="pt-note">{{ p.note }}</span>
             </div>
           </div>
-          <div class="stat-tile" :class="flexSign">
-            <div class="st-label">今日彈性</div>
-            <div class="st-val">
-              {{ fmtMins(day.flexDeltaMinutes) }}<span class="st-unit">分</span>
-            </div>
-          </div>
-          <div class="stat-tile neutral">
-            <div class="st-label">實際工時</div>
-            <div class="st-val st-val-mono">{{ workDisplay }}</div>
-          </div>
-        </div>
-
-        <p v-if="day.note" class="day-note">{{ day.note }}</p>
-      </template>
-
-      <!-- Skeleton while loading -->
-      <div v-else class="skeleton">
-        <div class="sk-row">
-          <div class="sk-block" style="height:56px;width:72px;"></div>
-          <div class="sk-block" style="height:8px;flex:1;margin:24px 16px;"></div>
-          <div class="sk-block" style="height:56px;width:72px;"></div>
-        </div>
-        <div class="sk-block" style="height:44px;margin-top:18px;"></div>
-      </div>
-    </div>
-
-    <!-- RIGHT: Punch timeline -->
-    <div class="punch-card">
-      <div class="pc-head">
-        <span class="pc-title">打卡紀錄</span>
-        <span class="pc-badge">外部同步</span>
-      </div>
-
-      <div v-if="!day?.punches?.length" class="pc-empty">
-        <div class="pce-ring">○</div>
-        <div class="pce-msg">{{ loading ? '載入中…' : '尚無打卡紀錄' }}</div>
-        <div v-if="!loading && day" class="pce-sub">等待外部系統同步</div>
-      </div>
-
-      <div v-else class="punch-timeline">
-        <div v-for="(p, i) in day.punches" :key="p.id" class="pt-row">
-          <div class="pt-track">
-            <div class="pt-dot" :class="`dot-${punchKind(i, day.punches.length)}`"></div>
-            <div v-if="i < day.punches.length - 1" class="pt-line"></div>
-          </div>
-          <div class="pt-body">
-            <span class="pt-time">{{ fmtTime(p.at) }}</span>
-            <span class="pt-tag" :class="`ptag-${punchKind(i, day.punches.length)}`">
-              {{ punchLabel(i, day.punches.length) }}
-            </span>
-            <span v-if="p.note" class="pt-note">{{ p.note }}</span>
-          </div>
         </div>
       </div>
+    </template>
+
+    <!-- Skeleton while loading -->
+    <div v-else class="skeleton">
+      <div class="sk-row">
+        <div class="sk-block" style="height:56px;width:72px;"></div>
+        <div class="sk-block" style="height:8px;flex:1;margin:24px 16px;"></div>
+        <div class="sk-block" style="height:56px;width:72px;"></div>
+      </div>
+      <div class="sk-block" style="height:44px;margin-top:18px;"></div>
+      <div class="sk-block" style="height:100px;margin-top:16px;"></div>
     </div>
   </div>
 </template>
@@ -326,20 +324,8 @@ function punchKind(idx, total) {
   margin-top: 3px;
 }
 
-/* ── 2-column layout ──────────────────────── */
-.day-layout {
-  display: grid;
-  grid-template-columns: 3fr 2fr;
-  gap: 16px;
-  align-items: start;
-}
-@media (max-width: 720px) {
-  .day-layout { grid-template-columns: 1fr; }
-}
-
-/* ── Card base ────────────────────────────── */
-.work-card,
-.punch-card {
+/* ── Single unified card ──────────────────── */
+.today-card {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -348,9 +334,9 @@ function punchKind(idx, total) {
 }
 
 /* ── Times hero ───────────────────────────── */
-.times-hero {
+.tc-hero {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 16px;
   margin-bottom: 20px;
 }
@@ -431,11 +417,12 @@ function punchKind(idx, total) {
   font-size: 11px;
 }
 
-/* ── Stats strip ──────────────────────────── */
-.stats-strip {
+/* ── Stats ────────────────────────────────── */
+.tc-stats {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 10px;
+  margin-bottom: 20px;
 }
 .stat-tile {
   border-radius: 10px;
@@ -502,7 +489,24 @@ function punchKind(idx, total) {
   50% { opacity: 0.45; }
 }
 
-/* ── Punch card ───────────────────────────── */
+/* ── Punch section ────────────────────────── */
+.tc-punches {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  margin-top: 4px;
+}
+.tc-punches-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.punch-timeline {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+/* (legacy alias kept for pc-head if referenced elsewhere) */
 .pc-head {
   display: flex;
   align-items: center;
@@ -555,7 +559,10 @@ function punchKind(idx, total) {
 }
 
 /* ── Punch timeline ───────────────────────── */
-.punch-timeline { display: flex; flex-direction: column; }
+.punch-timeline {
+  display: flex;
+  flex-direction: column;
+}
 .pt-row {
   display: flex;
   gap: 12px;
