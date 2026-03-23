@@ -30,7 +30,7 @@ docker compose up -d --no-deps timecard
 
 `--no-deps` 會跳過 `postgres`，只重建 `timecard` 容器，資料完全不受影響。
 
-## 直接部屬
+## 直接部署
 
 ```bash
 cd ".\src\Timecard.Api"
